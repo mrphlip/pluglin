@@ -5,8 +5,8 @@
 		<AssemblyName>RarityColour</AssemblyName>
 		<Product>Relic Colour</Product>
 		<BepInExPluginGuid>com.mrphlip.peglin.RelicColour</BepInExPluginGuid>
-		<Descrpition>Re-colours orb and relic offers to show their rarity</Descrpition>
-		<Version>0.1</Version>
+		<Description>Re-colours orb and relic offers to show their rarity</Description>
+		<Version>0.2</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 		<RestoreAdditionalProjectSources>

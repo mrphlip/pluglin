@@ -10,21 +10,25 @@ namespace RarityColour;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInProcess("Peglin.exe")]
 [HarmonyPatch]
-public class Plugin : BaseUnityPlugin
-{
+public class Plugin : BaseUnityPlugin {
 	private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
 	internal static new ManualLogSource Logger;
 
-	// Normal background is red tinted - #77403C
-	// These colours are tinted cyan to compensate
-	private static readonly ColorBlock COMMON = MakeColorBlock(1f, 1f, 1f);
-	private static readonly ColorBlock UNCOMMON = MakeColorBlock(0.25f, 1f, 0.5f);
-	private static readonly ColorBlock RARE = MakeColorBlock(0.25f, 0.75f, 1f);
-	private static readonly ColorBlock BOSS = MakeColorBlock(0.75f, 0.25f, 1f);
-	private static readonly ColorBlock SPECIAL = MakeColorBlock(0.75f, 1f, 0.25f);
+	private static readonly ColorBlock COMMON = MakeColorBlock(0.5f, 0.25f, 0.25f);
+	private static readonly ColorBlock COMMON_LV2 = MakeColorBlock(0.5f, 0.5f, 0.5f);
+	private static readonly ColorBlock COMMON_LV3 = MakeColorBlock(0.9f, 0.55f, 0.3f);
+	private static readonly ColorBlock UNCOMMON = MakeColorBlock(0.25f, 0.75f, 0.25f);
+	private static readonly ColorBlock RARE = MakeColorBlock(0.25f, 0.25f, 0.75f);
+	private static readonly ColorBlock BOSS = MakeColorBlock(0.75f, 0.25f, 0.75f);
+	private static readonly ColorBlock SPECIAL = MakeColorBlock(0.75f, 0.5f, 0.25f);
 
-	private void Awake()
-	{
+	private static readonly Sprite ItemBackground1 = MakeSprite(Assets.PNGItemBackground1);
+	private static readonly Sprite ItemBackground2 = MakeSprite(Assets.PNGItemBackground2);
+	private static readonly Sprite ItemBackground3 = MakeSprite(Assets.PNGItemBackground3);
+	private static readonly Sprite ItemBackgroundSold = MakeSprite(Assets.PNGItemBackgroundSold);
+	private static readonly Sprite ShopBackground = MakeSprite(Assets.PNGShopBackground);
+
+	private void Awake() {
 		harmony.PatchAll();
 		Logger = base.Logger;
 		Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
@@ -42,68 +46,110 @@ public class Plugin : BaseUnityPlugin
 		return cb;
 	}
 
+	private static Sprite MakeSprite(byte[] pngdata) {
+		Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+		tex.LoadImage(pngdata);
+		tex.filterMode = FilterMode.Point;
+		return UnityEngine.Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+	}
+
+	static private (PachinkoBall.OrbRarity, int) GetOrbProps(GameObject orb) {
+		DeckManager[] deckManagers = Resources.FindObjectsOfTypeAll<DeckManager>();
+		if (deckManagers.Length <= 0) {
+			Logger.LogError($"Couldn't find DeckManager!");
+			return (PachinkoBall.OrbRarity.COMMON, 1);
+		}
+		DeckManager deckManager = deckManagers[0];
+
+		Peglin.ClassSystem.Class cls = (Peglin.ClassSystem.Class)typeof(DeckManager).GetField("_selectedClass", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(deckManager);
+		PachinkoBall.OrbRarity rarity = (PachinkoBall.OrbRarity)typeof(DeckManager).GetMethod("GetFinalRarityForOrb", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(deckManager, new object[]{orb, cls});
+		// Some orbs, like Pebball, are "Not Present" on some classes, but can still be in your deck
+		// Or maybe you're using Custom Start
+		// In this case, try to get the orb's base rarity
+		if (rarity == PachinkoBall.OrbRarity.NOT_PRESENT)
+			rarity = orb.GetComponent<PachinkoBall>().orbRarity;
+
+		Battle.Attacks.Attack attack = orb.GetComponent<Battle.Attacks.Attack>();
+		int level= attack.Level;
+		if (attack is Battle.Attacks.AssemballAttack)
+			level = (attack as Battle.Attacks.AssemballAttack).GetAssemballDisplayLevel();
+
+		return (rarity, level);
+	}
+
+	static private ColorBlock GetOrbColour(PachinkoBall.OrbRarity rarity, int level) {
+		switch (rarity) {
+			case PachinkoBall.OrbRarity.NOT_PRESENT:
+			case PachinkoBall.OrbRarity.COMMON:
+			default:
+				if (level <= 1)
+					return COMMON;
+				else if (level == 2)
+					return COMMON_LV2;
+				else
+					return COMMON_LV3;
+			case PachinkoBall.OrbRarity.UNCOMMON:
+				return UNCOMMON;
+			case PachinkoBall.OrbRarity.RARE:
+				return RARE;
+			case PachinkoBall.OrbRarity.SPECIAL:
+				return SPECIAL;
+		}
+	}
 
 	[HarmonyPatch(typeof(PeglinUI.PostBattle.UpgradeOption), "SpecifiedOrb", MethodType.Setter)]
 	[HarmonyPostfix]
-	static private void PatchOfferOrb(PeglinUI.PostBattle.UpgradeOption __instance, UnityEngine.GameObject value) {
-		//Logger.LogInfo($"HOOK: Set orb offer {__instance.name} to {value.name}");
-
+	static private void PatchOfferOrb(PeglinUI.PostBattle.UpgradeOption __instance, GameObject value) {
 		Button btn = __instance.gameObject.GetComponent<Button>();
 		if (!btn) {
 			Logger.LogError($"Couldn't find UnityEngine.UI.Button on {__instance.name}!");
 			return;
 		}
-
-		DeckManager[] deckManagers = Resources.FindObjectsOfTypeAll<DeckManager>();
-		if (deckManagers.Length <= 0) {
-			Logger.LogError($"Couldn't find DeckManager!");
+		Image backgroundImage = btn.targetGraphic as Image;
+		if (backgroundImage == null || backgroundImage.name != "OrbBackground")
+		{
+			// The UpgradeOption class seems to handle both the actual orb buttons we want to style
+			// and the "OK" button on the confirmation prompt, which we definitely do not
 			return;
 		}
-		DeckManager deckManager = deckManagers[0];
 
-		Peglin.ClassSystem.Class cls = (Peglin.ClassSystem.Class)typeof(DeckManager).GetField("_selectedClass", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(deckManager);
-		PachinkoBall.OrbRarity rarity = (PachinkoBall.OrbRarity)typeof(DeckManager).GetMethod("GetFinalRarityForOrb", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(deckManager, new object[]{value, cls});
-		// Some orbs, like Pebball, are "Not Present" on some classes, but can still be in your deck
-		// Or maybe you're using Custom Start
-		// In this case, try to get the orb's base rarity
-		if (rarity == PachinkoBall.OrbRarity.NOT_PRESENT)
-			rarity = value.GetComponent<PachinkoBall>().orbRarity;
+		(PachinkoBall.OrbRarity rarity, int level) = GetOrbProps(value);
+		btn.colors = GetOrbColour(rarity, level);
 
-		//Logger.LogInfo($"Final rarity is {rarity}");
-		switch (rarity) {
-			case PachinkoBall.OrbRarity.NOT_PRESENT:
-			case PachinkoBall.OrbRarity.COMMON:
-				btn.colors = COMMON;
-				break;
-			case PachinkoBall.OrbRarity.UNCOMMON:
-				btn.colors = UNCOMMON;
-				break;
-			case PachinkoBall.OrbRarity.RARE:
-				btn.colors = RARE;
-				break;
-			case PachinkoBall.OrbRarity.SPECIAL:
-				btn.colors = SPECIAL;
-				break;
-		}
+		if (level <= 1)
+			backgroundImage.sprite = ItemBackground1;
+		else if (level == 2)
+			backgroundImage.sprite = ItemBackground2;
+		else if (level >= 3)
+			backgroundImage.sprite = ItemBackground3;
 	}
 
-	[HarmonyPatch(typeof(RelicIcon), "SetRelic")]
+	[HarmonyPatch(typeof(PeglinUI.PostBattle.UpgradeOption), "SetOptionInactive")]
 	[HarmonyPostfix]
-	static private void PatchOfferRelic(RelicIcon __instance, Relics.Relic r) {
-		//Logger.LogInfo($"HOOK: Set relic offer {__instance.name} to {r.name}");
-
-		Button btn = __instance.gameObject.GetComponentInParent<UnityEngine.UI.Button>();
+	static private void PatchPurchaseOrb(PeglinUI.PostBattle.UpgradeOption __instance) {
+		Button btn = __instance.gameObject.GetComponent<Button>();
 		if (!btn) {
-			// This is not an error, as this method is also called for the icons in the left status area
-			// which are not buttons
-			//Logger.LogError($"Couldn't find UnityEngine.UI.Button on {__instance.name}!");
+			Logger.LogError($"Couldn't find UnityEngine.UI.Button on {__instance.name}!");
 			return;
 		}
+		Image backgroundImage = btn.targetGraphic as Image;
+		if (backgroundImage == null || backgroundImage.name != "OrbBackground")
+		{
+			// The UpgradeOption class seems to handle both the actual orb buttons we want to style
+			// and the "OK" button on the confirmation prompt, which we definitely do not
+			return;
+		}
+		backgroundImage.sprite = ItemBackgroundSold;
 
+		if (btn.colors == COMMON_LV2 || btn.colors == COMMON_LV3)
+			btn.colors = COMMON;
+	}
+
+	static private Relics.RelicRarity GetRelicRarity(Relics.Relic relic) {
 		Relics.RelicManager[] relicManagers = Resources.FindObjectsOfTypeAll<Relics.RelicManager>();
 		if (relicManagers.Length <= 0) {
 			Logger.LogError($"Couldn't find RelicManager!");
-			return;
+			return Relics.RelicRarity.COMMON;
 		}
 		Relics.RelicManager relicManager = relicManagers[0];
 
@@ -119,28 +165,68 @@ public class Plugin : BaseUnityPlugin
 		}
 		Relics.RelicRarity rarity;
 		if (loadout != null) {
-			rarity = (Relics.RelicRarity)typeof(Relics.RelicManager).GetMethod("GetFinalRarityForRelic", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(relicManager, new object[]{r, loadout});
+			rarity = (Relics.RelicRarity)typeof(Relics.RelicManager).GetMethod("GetFinalRarityForRelic", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(relicManager, new object[]{relic, loadout});
 			if (rarity == Relics.RelicRarity.UNAVAILABLE)
-				rarity = r.globalRarity;
+				rarity = relic.globalRarity;
 		} else {
-			rarity = r.globalRarity;
+			rarity = relic.globalRarity;
 		}
 
-		//Logger.LogInfo($"Final rarity is {rarity}");
+		return rarity;
+	}
+
+	static private ColorBlock GetRelicColor(Relics.RelicRarity rarity) {
 		switch (rarity) {
 			case Relics.RelicRarity.COMMON:
 			case Relics.RelicRarity.UNAVAILABLE:
-				btn.colors = COMMON;
-				break;
+			default:
+				return COMMON;
 			case Relics.RelicRarity.RARE:
-				btn.colors = RARE;
-				break;
+				return RARE;
 			case Relics.RelicRarity.BOSS:
-				btn.colors = BOSS;
-				break;
+				return BOSS;
 			case Relics.RelicRarity.NONE:
-				btn.colors = SPECIAL;
-				break;
+				return SPECIAL;
+		}
+	}
+
+	[HarmonyPatch(typeof(RelicIcon), "SetRelic")]
+	[HarmonyPostfix]
+	static private void PatchOfferRelic(RelicIcon __instance, Relics.Relic r) {
+		Button btn = __instance.gameObject.GetComponentInParent<UnityEngine.UI.Button>();
+		if (!btn) {
+			// This is not an error, as this method is also called for the icons in the left status area
+			// which are not buttons
+			//Logger.LogError($"Couldn't find UnityEngine.UI.Button on {__instance.name}!");
+			return;
+		}
+
+		Relics.RelicRarity rarity = GetRelicRarity(r);
+		btn.colors = GetRelicColor(rarity);
+		Image backgroundImage = btn.targetGraphic as Image;
+		if (backgroundImage != null) {
+			backgroundImage.sprite = ItemBackgroundSold;
+		}
+	}
+
+	[HarmonyPatch(typeof(Scenarios.Shop.ShopItem), "Initialize")]
+	[HarmonyPostfix]
+	static private void PatchShop(Scenarios.Shop.ShopItem __instance, Scenarios.Shop.IPurchasableItem item, Scenarios.Shop.ShopManager sm) {
+		Scenarios.Shop.PurchasableOrb item_orb = item as Scenarios.Shop.PurchasableOrb;
+		Scenarios.Shop.PurchasableRelic item_relic = item as Scenarios.Shop.PurchasableRelic;
+		Image background = __instance.itemBackground.GetComponent<Image>();
+		if (item_orb != null) {
+			GameObject orb = (GameObject)typeof(Scenarios.Shop.PurchasableOrb).GetField("_orbPrefab", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(item_orb);
+
+			(PachinkoBall.OrbRarity rarity, int level) = GetOrbProps(orb);
+			background.color = GetOrbColour(rarity, 1).normalColor;
+			background.sprite = ShopBackground;
+		} else if (item_relic != null) {
+			Relics.Relic relic = (Relics.Relic)typeof(Scenarios.Shop.PurchasableRelic).GetField("_relic", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(item_relic);
+
+			Relics.RelicRarity rarity = GetRelicRarity(relic);
+			background.color = GetRelicColor(rarity).normalColor;
+			background.sprite = ShopBackground;
 		}
 	}
 }
