@@ -12,7 +12,12 @@ $(TARGET_RELEASE): RarityColour.csproj $(ALLCODE) $(ALLASSETS)
 	dotnet build --configuration Release
 release: $(TARGET_RELEASE)
 
-all: debug release
+RelicColour.zip: $(TARGET_RELEASE) icon.png README.md CHANGELOG.md manifest.json
+	rm -f RelicColour.zip
+	zip -j RelicColour.zip $(TARGET_RELEASE) icon.png README.md CHANGELOG.md manifest.json
+zip: RelicColour.zip
+
+all: debug release zip
 
 install: $(TARGET_DEBUG)
 	cp $(TARGET_DEBUG) ../BepInEx/plugins
@@ -39,6 +44,6 @@ assets/ShopBackground.png: srcassets/Shop_Background.png
 	convert srcassets/Shop_Background.png -channel RG -evaluate Divide 0.25 -channel B -evaluate Divide 0.5 assets/ShopBackground.png
 
 clean:
-	rm -rf bin obj assets
+	rm -rf bin obj assets RelicColour.zip
 
-.PHONY: all debug release install instrelease clean
+.PHONY: all debug release zip install instrelease clean
