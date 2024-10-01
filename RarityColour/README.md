@@ -13,7 +13,7 @@ Once installed, post-battle upgrades and shops will have the buttons recoloured,
 ## How to install
 
 * Install from Thunderstore using [r2modman](https://thunderstore.io/c/peglin/p/ebkr/r2modman/)
-* For manual installation, install [BepInEx](https://thunderstore.io/c/peglin/p/BepInEx/BepInExPack_Peglin/), then download the mod and unzip `RarityColour.dll` into the `BepInEx\\plugins` folder.
+* For manual installation, install [BepInEx](https://thunderstore.io/c/peglin/p/BepInEx/BepInExPack_Peglin/), then download the mod and unzip `RarityColour.dll` into the `BepInEx\plugins` folder.
 
 ## How to build from source
 
