@@ -1,13 +1,24 @@
-all: bin/Debug/netstandard2.1/RarityColour.dll
+TARGET_DEBUG=bin/Debug/netstandard2.1/RarityColour.dll
+TARGET_RELEASE=bin/Release/netstandard2.1/RarityColour.dll
 
-bin/Debug/netstandard2.1/RarityColour.dll: RarityColour.csproj Plugin.cs Assets.cs
-	dotnet build
+ALLCODE=Plugin.cs
+ALLASSETS=assets assets/ItemBackground1.png assets/ItemBackground2.png assets/ItemBackground3.png assets/ItemBackgroundSold.png assets/ShopBackground.png
 
-install: all
-	cp bin/Debug/netstandard2.1/RarityColour.dll ../BepInEx/plugins
+$(TARGET_DEBUG): RarityColour.csproj $(ALLCODE) $(ALLASSETS)
+	dotnet build --configuration Debug
+debug: $(TARGET_DEBUG)
 
-Assets.cs: gen_assets_cs.sh assets assets/ItemBackground1.png assets/ItemBackground2.png assets/ItemBackground3.png assets/ItemBackgroundSold.png assets/ShopBackground.png
-	./gen_assets_cs.sh
+$(TARGET_RELEASE): RarityColour.csproj $(ALLCODE) $(ALLASSETS)
+	dotnet build --configuration Release
+release: $(TARGET_RELEASE)
+
+all: debug release
+
+install: $(TARGET_DEBUG)
+	cp $(TARGET_DEBUG) ../BepInEx/plugins
+
+instrelease: $(TARGET_RELEASE)
+	cp $(TARGET_RELEASE) ../BepInEx/plugins
 
 assets:
 	mkdir -p assets
@@ -28,6 +39,6 @@ assets/ShopBackground.png: srcassets/Shop_Background.png
 	convert srcassets/Shop_Background.png -channel RG -evaluate Divide 0.25 -channel B -evaluate Divide 0.5 assets/ShopBackground.png
 
 clean:
-	rm -rf bin obj assets Assets.cs
+	rm -rf bin obj assets
 
-.PHONY: all install clean
+.PHONY: all debug release install instrelease clean

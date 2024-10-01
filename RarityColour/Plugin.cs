@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using System.IO;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,11 +23,11 @@ public class Plugin : BaseUnityPlugin {
 	private static readonly ColorBlock BOSS = MakeColorBlock(0.75f, 0.25f, 0.75f);
 	private static readonly ColorBlock SPECIAL = MakeColorBlock(0.75f, 0.5f, 0.25f);
 
-	private static readonly Sprite ItemBackground1 = MakeSprite(Assets.PNGItemBackground1);
-	private static readonly Sprite ItemBackground2 = MakeSprite(Assets.PNGItemBackground2);
-	private static readonly Sprite ItemBackground3 = MakeSprite(Assets.PNGItemBackground3);
-	private static readonly Sprite ItemBackgroundSold = MakeSprite(Assets.PNGItemBackgroundSold);
-	private static readonly Sprite ShopBackground = MakeSprite(Assets.PNGShopBackground);
+	private static readonly Sprite ItemBackground1 = MakeSprite("ItemBackground1.png");
+	private static readonly Sprite ItemBackground2 = MakeSprite("ItemBackground2.png");
+	private static readonly Sprite ItemBackground3 = MakeSprite("ItemBackground3.png");
+	private static readonly Sprite ItemBackgroundSold = MakeSprite("ItemBackgroundSold.png");
+	private static readonly Sprite ShopBackground = MakeSprite("ShopBackground.png");
 
 	private void Awake() {
 		harmony.PatchAll();
@@ -46,10 +47,28 @@ public class Plugin : BaseUnityPlugin {
 		return cb;
 	}
 
-	private static Sprite MakeSprite(byte[] pngdata) {
+	private static byte[] GetAsset(string assetname) {
+		Assembly assembly = typeof(Plugin).Assembly;
+		string fullname = $"{assembly.GetName().Name}.assets.{assetname}";
+		Stream datastream = assembly.GetManifestResourceStream(fullname);
+		int len = (int)datastream.Length, n = 0;
+		byte[] data = new byte[len];
+		while (n < len) {
+			int i = datastream.Read(data, n, len - n);
+			if (i == 0) break;
+			n += i;
+		}
+		return data;
+	}
+
+	private static Sprite MakeSprite(string assetname) {
 		Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-		tex.LoadImage(pngdata);
+		tex.LoadImage(GetAsset(assetname));
 		tex.filterMode = FilterMode.Point;
+		tex.wrapMode = TextureWrapMode.Clamp;
+		tex.wrapModeU = TextureWrapMode.Clamp;
+		tex.wrapModeV = TextureWrapMode.Clamp;
+		tex.wrapModeW = TextureWrapMode.Clamp;
 		return UnityEngine.Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
 	}
 
