@@ -2,11 +2,11 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<AssemblyName>RarityColour</AssemblyName>
-		<Product>Rarity Colour</Product>
-		<BepInExPluginGuid>com.mrphlip.peglin.RelicColour</BepInExPluginGuid>
-		<Description>Re-colours orb and relic offers to show their rarity</Description>
-		<Version>0.2</Version>
+		<AssemblyName>RelicStats</AssemblyName>
+		<Product>Relic Stats</Product>
+		<BepInExPluginGuid>com.mrphlip.peglin.RelicStats</BepInExPluginGuid>
+		<Description>Show usage stats on acquired relics</Description>
+		<Version>0.1</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 		<RestoreAdditionalProjectSources>
@@ -14,7 +14,7 @@
 			https://nuget.bepinex.dev/v3/index.json;
 			https://nuget.samboy.dev/v3/index.json
 		</RestoreAdditionalProjectSources>
-		<RootNamespace>RarityColour</RootNamespace>
+		<RootNamespace>RelicStats</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -38,7 +38,5 @@
 		<Reference Include="UnityEngine.UI">
 			<HintPath>../Peglin/Peglin_Data/Managed/UnityEngine.UI.dll</HintPath>
 		</Reference>
-
-		<EmbeddedResource Include="assets/*.png" />
 	</ItemGroup>
 </Project>
