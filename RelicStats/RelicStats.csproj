@@ -38,5 +38,8 @@
 		<Reference Include="UnityEngine.UI">
 			<HintPath>../Peglin/Peglin_Data/Managed/UnityEngine.UI.dll</HintPath>
 		</Reference>
+		<Reference Include="Unity.TextMeshPro">
+			<HintPath>../Peglin/Peglin_Data/Managed/Unity.TextMeshPro.dll</HintPath>
+		</Reference>
 	</ItemGroup>
 </Project>

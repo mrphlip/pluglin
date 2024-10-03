@@ -1,7 +1,7 @@
 TARGET_DEBUG=bin/Debug/netstandard2.1/RelicStats.dll
 TARGET_RELEASE=bin/Release/netstandard2.1/RelicStats.dll
 
-ALLCODE=Plugin.cs
+ALLCODE=Plugin.cs Abstract.cs Relics.cs Hooks.cs
 
 $(TARGET_DEBUG): RelicStats.csproj $(ALLCODE)
 	dotnet build --configuration Debug
