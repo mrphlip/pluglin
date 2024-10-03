@@ -35,9 +35,8 @@ public class WellDoneSteak : HealingCounter {
 	public override int? HealAmount => (int)Relics.RelicManager.HEAL_ON_RELOAD_AMOUNT;
 }
 
-public class BagOfOrangePegs : NoopTracker {
+public class BagOfOrangePegs : MultDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.PEG_CLEAR_DAMAGE_SCALING;
-	// TODO: Could potentially figure out how much bonus damage is done due to this relic
 }
 
 public class LightShaftPotion : SimpleCounter {
@@ -50,9 +49,8 @@ public class HeavyShaftPotion : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"CRIT_PEG\"> refreshes";
 }
 
-public class WeightedChip : NoopTracker {
+public class WeightedChip : MultDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SLOT_MULTIPLIERS;
-	// TODO: Could potentially figure out how much damage is gained/lost due to this relic
 }
 
 public class OldSaltShaker : SimpleCounter {
@@ -199,9 +197,8 @@ public class WallChicken : NoopTracker {
 
 public class PowerGlove : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_STRENGTH_SMALL;
-	public override int BonusDamage => 1;
-	public override int BonusCrit => 1;
 }
+
 
 
 

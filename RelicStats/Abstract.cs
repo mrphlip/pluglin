@@ -1,6 +1,7 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -112,43 +113,93 @@ public abstract class HealingCounter : SimpleCounter {
 	public override string Tooltip => $"{count} <style=heal>healed</style>";
 }
 
+public abstract class DamageCounter : Tracker {
+	protected int goodCount = 0, badCount = 0;
+
+	public override void Reset() { goodCount = badCount = 0; }
+	public override void Used() {}
+	public override object State {
+		get => (goodCount, badCount);
+		set {
+			(goodCount, badCount) = ((int, int))value;
+		}
+	}
+	public override string Tooltip { get {
+		string tooltip = $"{goodCount} <style=damage>damage added</style>";
+		if (badCount > 0)
+			tooltip = $"{tooltip}; {badCount} <style=dmg_negative>damage removed</style>";
+		return tooltip;
+	}}
+
+	public virtual void HandleFire(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		if (!Tracker.HaveRelic(Relic))
+			return;
+		float fullDamage = attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+		float baseDamage = GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+		if (fullDamage > baseDamage)
+			goodCount += (int)(fullDamage - baseDamage);
+		else if (fullDamage < baseDamage)
+			badCount += (int)(baseDamage - fullDamage);
+	}
+	public abstract float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount);
+}
 [HarmonyPatch]
-public abstract class PegDamageCounter : SimpleCounter {
+public abstract class PegDamageCounter : DamageCounter {
+	public virtual int Step => 1;
 	private int activate_count = 0;
+	public override void Reset() {
+		base.Reset();
+		activate_count = 0;
+	}
 	public override void Used() {
 		activate_count += Step;
 	}
-	public virtual void HandleFire(int damagePerPeg) {
-		if (damagePerPeg > 0 && activate_count > 0)
-			count += activate_count * damagePerPeg;
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		float[] newDmgValues = new float[dmgValues.Length + 1];
+		newDmgValues = dmgValues.Append(-activate_count).ToArray();
 		activate_count = 0;
+		return attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus, critCount, false);
 	}
-	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 [HarmonyPatch]
-public abstract class OrbDamageCounter : SimpleCounter {
-	public virtual int BonusDamage => 0;
-	public virtual int BonusCrit => 0;
+public abstract class OrbDamageCounter : DamageCounter {
 	public override void Used() {}
-	public virtual void HandleFire(Battle.Attacks.Attack attack, float[] dmgValues, int critCount) {
-		if (!Tracker.HaveRelic(Relic))
-			return;
-		var rules = attack.GetComponent<Battle.Pachinko.BallBehaviours.AttackDamageModifiableRules>();
-		if (critCount <= 0 && rules.baseDamageNonMod)
-			return;
-		else if (critCount > 0 && rules.critDamageNonMod)
-			return;
-		int extraDamage = (critCount > 0) ? BonusCrit : BonusDamage;
-		if (critCount <= 0 && rules != null && rules.critBoostAppliesToRegular)
-			extraDamage += BonusCrit;
-		else if (critCount > 0 && rules != null && rules.regularBoostAppliesToCrit)
-			extraDamage += BonusDamage;
-		if (extraDamage > 0)
-			foreach (float dmg in dmgValues)
-				if (dmg > 0)
-					count += extraDamage * (int)dmg;
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
+		var owned = Utils.GetAttr<Relics.RelicManager, Dictionary<Relics.RelicEffect, Relics.Relic>>(relicManager, "_ownedRelics");
+		Relics.Relic r = owned[Relic];
+		owned.Remove(Relic);
+		float baseDamage = attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+		owned.Add(Relic, r);
+		return baseDamage;
 	}
-	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
+}
+[HarmonyPatch]
+public abstract class MultDamageCounter : DamageCounter {
+	protected bool _active = false;
+	protected float multiplier = 1f;
+	public override void Reset() {
+		base.Reset();
+		multiplier = 1f;
+	}
+	public override void Used() {
+		Plugin.Logger.LogInfo($"Used {Relic}");
+		_active = true;
+	}
+	public virtual void AddDamageMultiplier(float mult) {
+		Plugin.Logger.LogInfo($"Activated multiplier {mult}");
+		if (_active)
+			multiplier *= mult;
+		Plugin.Logger.LogInfo($"Accumulated multiplier {multiplier}");
+		_active = false;
+	}
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		Plugin.Logger.LogInfo($"Calculating damage: {dmgMult}");
+		dmgMult /= multiplier;
+		Plugin.Logger.LogInfo($"Previous multiplier: {dmgMult}");
+		multiplier = 1f;
+		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+	}
 }
 
 public class Utils {

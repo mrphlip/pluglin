@@ -52,21 +52,27 @@ public class Hooks {
 
 	[HarmonyPatch(typeof(TargetedAttack), "Fire")]
 	[HarmonyPrefix]
-	private static void FireTargeted(TargetedAttack __instance, float[] dmgValues, int critCount)
-		=> HandleFire(__instance, dmgValues, critCount);
+	private static void FireTargeted(TargetedAttack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount)
+		=> HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
 	[HarmonyPatch(typeof(Battle.Attacks.ProjectileAttack), "Fire")]
 	[HarmonyPrefix]
-	private static void FireProjectile(Battle.Attacks.ProjectileAttack __instance, float[] dmgValues, int critCount)
-		=> HandleFire(__instance, dmgValues, critCount);
-	private static void HandleFire(Battle.Attacks.Attack __instance, float[] dmgValues, int critCount) {
-		int damagePerPeg = (int)__instance.GetModifiedDamagePerPeg(critCount);
-		foreach (var tracker in Tracker.trackers) {
-			PegDamageCounter pegtracker = tracker.Value as PegDamageCounter;
-			if (pegtracker != null)
-				pegtracker.HandleFire(damagePerPeg);
-			OrbDamageCounter orbtracker = tracker.Value as OrbDamageCounter;
-			if (orbtracker != null)
-				orbtracker.HandleFire(__instance, dmgValues, critCount);
+	private static void FireProjectile(Battle.Attacks.ProjectileAttack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount)
+		=> HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+	private static void HandleFire(Battle.Attacks.Attack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		foreach (var tracker in Tracker.trackers.Values) {
+			DamageCounter dmgtracker = tracker as DamageCounter;
+			if (dmgtracker != null)
+				dmgtracker.HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+		}
+	}
+
+	[HarmonyPatch(typeof(BattleController), "AddDamageMultiplier")]
+	[HarmonyPostfix]
+	private static void AddDamageMultiplier(float mult) {
+		foreach (var tracker in Tracker.trackers.Values) {
+			MultDamageCounter dmgtracker = tracker as MultDamageCounter;
+			if (dmgtracker != null)
+				dmgtracker.AddDamageMultiplier(mult);
 		}
 	}
 }
