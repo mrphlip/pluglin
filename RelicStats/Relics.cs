@@ -89,14 +89,7 @@ public class Refillibuster : SimpleCounter {
 	}
 	private void DamageAllEnemies(float damageAmount) {
 		if (_active) {
-			int enemyCount = 0;
-			foreach (var dlg in Battle.Enemies.Enemy.OnAllEnemiesDamaged.GetInvocationList()) {
-				// Is this an actual enemy that will be damaged, or one of my injected hooks?
-				if (dlg.Target is Battle.Enemies.Enemy) {
-					enemyCount += 1;
-				}
-			}
-			count += enemyCount * (int)damageAmount;
+			count += Utils.EnemyDamageCount() * (int)damageAmount;
 			_active = false;
 		}
 	}
@@ -199,6 +192,41 @@ public class PowerGlove : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_STRENGTH_SMALL;
 }
 
+public class Ambidexionary : SimpleCounter {
+	public Ambidexionary() {
+		BattleController.OnOrbDiscarded += this.OrbDiscarded;
+	}
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_DISCARD;
+	public override void Used() {}
+	public void OrbDiscarded() {
+		if (!Tracker.HaveRelic(Relic))
+			return;
+		BattleController battleController = Utils.GetResource<BattleController>();
+		if (battleController.NumShotsDiscarded == battleController.MaxDiscardedShots)
+			count += 1;
+	}
+	public override string Tooltip => $"{count} extra discard{Utils.Plural(count)} used";
+}
+
+public class DecoyOrb : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.FREE_RELOAD;
+	public override string Tooltip => $"{count} free reload{Utils.Plural(count)}";
+}
+
+public class KineticMeteorite : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOMB_FORCE_ALWAYS;
+	public override string Tooltip => $"{count} explosive force{Utils.Plural(count)}";
+}
+
+public class Pocketwatch : PegDamageCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.INFLIGHT_DAMAGE;
+}
+
+public class ImprovedCatalyst : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_BOMB_DAMAGE;
+	public override int Step => (int)(Utils.EnemyDamageCount() * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE);
+	public override string Tooltip => $"{count} <style=damage>damage added</style>";
+}
 
 
 

@@ -45,12 +45,17 @@ public abstract string Tooltip { get; }
 		AddTracker(new Apple());
 		AddTracker(new WallChicken());
 		AddTracker(new PowerGlove());
+		AddTracker(new Ambidexionary());
+		AddTracker(new DecoyOrb());
+		AddTracker(new KineticMeteorite());
+		AddTracker(new Pocketwatch());
+		AddTracker(new ImprovedCatalyst());
 
 		AddTracker(new OldGardenerGloves());
 		ResetAll();
 
 		foreach (Relics.RelicEffect i in Enum.GetValues(typeof(Relics.RelicEffect))) {
-			if (!trackers.ContainsKey(i) && (int)i <= 25) {
+			if (!trackers.ContainsKey(i) && (int)i <= 30) {
 				Plugin.Logger.LogWarning($"Missing a tracker for {i}");
 			}
 		}
@@ -183,20 +188,15 @@ public abstract class MultDamageCounter : DamageCounter {
 		multiplier = 1f;
 	}
 	public override void Used() {
-		Plugin.Logger.LogInfo($"Used {Relic}");
 		_active = true;
 	}
 	public virtual void AddDamageMultiplier(float mult) {
-		Plugin.Logger.LogInfo($"Activated multiplier {mult}");
 		if (_active)
 			multiplier *= mult;
-		Plugin.Logger.LogInfo($"Accumulated multiplier {multiplier}");
 		_active = false;
 	}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
-		Plugin.Logger.LogInfo($"Calculating damage: {dmgMult}");
 		dmgMult /= multiplier;
-		Plugin.Logger.LogInfo($"Previous multiplier: {dmgMult}");
 		multiplier = 1f;
 		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
 	}
@@ -216,7 +216,23 @@ public class Utils {
 		return (TFld)fld.GetValue(obj);
 	}
 
+	static public TFld GetStaticAttr<TObj, TFld>(string field) {
+		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Static);
+		return (TFld)fld.GetValue(null);
+	}
+
 	static public string Plural(int n, string ifplural = "s", string ifsingle = "") {
 		return (n == 1) ? ifsingle : ifplural;
+	}
+
+	static public int EnemyDamageCount() {
+		int enemyCount = 0;
+		foreach (var dlg in Battle.Enemies.Enemy.OnAllEnemiesDamaged.GetInvocationList()) {
+			// Is this an actual enemy that will be damaged, or one of my injected hooks?
+			if (dlg.Target is Battle.Enemies.Enemy) {
+				enemyCount += 1;
+			}
+		}
+		return enemyCount;
 	}
 }
