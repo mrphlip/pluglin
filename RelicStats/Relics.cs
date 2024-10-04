@@ -228,6 +228,23 @@ public class ImprovedCatalyst : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
+public class AmbiguousAmulet : PegDamageCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.WALL_BOUNCES_COUNT;
+}
+
+public class CursedMask : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.CONFUSION_RELIC;
+}
+
+public class SealedConviction : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.NO_DISCARD;
+	// TODO: check impl for new Ballance based version, count stacks of ballance added?
+}
+
+public class Electropegnet : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.PEG_MAGNET;
+}
+
 
 
 public class OldGardenerGloves : SimpleCounter {

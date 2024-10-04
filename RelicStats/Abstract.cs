@@ -19,39 +19,11 @@ public abstract string Tooltip { get; }
 	public static readonly Dictionary<Relics.RelicEffect, Tracker> trackers = new Dictionary<Relics.RelicEffect, Tracker>();
 	public static readonly HashSet<Relics.RelicEffect> relics = new HashSet<Relics.RelicEffect>();
 	public static void PopulateTrackers() {
-		AddTracker(new ConsolationPrize());
-		AddTracker(new EnhancedGunpowder());
-		AddTracker(new AlchemistCookbook());
-		AddTracker(new Cookie());
-		AddTracker(new WellDoneSteak());
-		AddTracker(new BagOfOrangePegs());
-		AddTracker(new LightShaftPotion());
-		AddTracker(new HeavyShaftPotion());
-		AddTracker(new WeightedChip());
-		AddTracker(new OldSaltShaker());
-		AddTracker(new GiftThatKeepsGiving());
-		AddTracker(new RoundGuard());
-		AddTracker(new Refillibuster());
-		AddTracker(new MatryoshkaDoll());
-		AddTracker(new Recombombulator());
-		AddTracker(new ShortFuse());
-		AddTracker(new StrangeBrew());
-		AddTracker(new LuckyPenny());
-		AddTracker(new ThreeExtraCrits());
-		AddTracker(new RefreshingPunch());
-		AddTracker(new PegBag());
-		AddTracker(new ThreeExtraRefresh());
-		AddTracker(new EvadeChance());
-		AddTracker(new Apple());
-		AddTracker(new WallChicken());
-		AddTracker(new PowerGlove());
-		AddTracker(new Ambidexionary());
-		AddTracker(new DecoyOrb());
-		AddTracker(new KineticMeteorite());
-		AddTracker(new Pocketwatch());
-		AddTracker(new ImprovedCatalyst());
-
-		AddTracker(new OldGardenerGloves());
+		foreach (Type t in typeof(Tracker).Assembly.GetTypes()) {
+			if (t.IsSubclassOf(typeof(Tracker)) && !t.IsAbstract) {
+				AddTracker((Tracker)t.GetConstructor(Type.EmptyTypes).Invoke(null));
+			}
+		}
 		ResetAll();
 
 		foreach (Relics.RelicEffect i in Enum.GetValues(typeof(Relics.RelicEffect))) {
