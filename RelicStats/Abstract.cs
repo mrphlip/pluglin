@@ -27,7 +27,7 @@ public abstract string Tooltip { get; }
 		ResetAll();
 
 		foreach (Relics.RelicEffect i in Enum.GetValues(typeof(Relics.RelicEffect))) {
-			if (!trackers.ContainsKey(i) && (int)i <= 30) {
+			if (!trackers.ContainsKey(i)) {
 				Plugin.Logger.LogWarning($"Missing a tracker for {i}");
 			}
 		}
@@ -60,6 +60,8 @@ public abstract class NoopTracker : Tracker {
 	public override string Tooltip => null;
 	public override object State { get => null; set {} }
 }
+
+public abstract class TodoTracker : NoopTracker {}
 
 public abstract class SimpleCounter : Tracker {
 	protected int count = 0;
