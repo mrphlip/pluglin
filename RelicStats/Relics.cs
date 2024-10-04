@@ -478,7 +478,7 @@ public class InfernalIngot : HealingCounter {
 	}
 	public override void Used() {
 		_active = true;
-		_damageActive = false;
+		_damageActive = true;
 	}
 	[HarmonyPatch(typeof(Battle.TargetingManager), "HandlePegActivated")]
 	[HarmonyPostfix]
@@ -487,75 +487,87 @@ public class InfernalIngot : HealingCounter {
 		t._active = false;
 		t._damageActive = false;
 	}
-	[HarmonyPatch(typeof(Battle.TargetingManager), "AttemptDamageTargetedEnemy")]
-	[HarmonyPostfix]
-	private static void Damage(bool __result) {
-		if (!__result)
-			return;
-		InfernalIngot t = (InfernalIngot)Tracker.trackers[Relics.RelicEffect.LIFESTEAL_PEG_HITS];
-		if (t._damageActive)
-			t.damageCount++;
-		t._damageActive = false;
+	public void Damage(float amount) {
+		if (_damageActive)
+			damageCount += (int)amount;
+		_damageActive = false;
 	}
 	public override string Tooltip => $"{damageCount} <style=damage>damage dealt</style>; {base.Tooltip}";
 }
 
 [HarmonyPatch]
-public class MentalMantle : SimpleCounter {
+public class MentalMantle : DamageTargetedCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_TARGETED_PEG_HITS;
-	private bool _active = false;
-	public override void Reset() {
-		base.Reset();
-		_active = false;
-	}
-	public override void Used() {
-		_active = true;
-	}
 	[HarmonyPatch(typeof(Battle.TargetingManager), "HandlePegActivated")]
 	[HarmonyPostfix]
 	private static void Disable() {
 		MentalMantle t = (MentalMantle)Tracker.trackers[Relics.RelicEffect.DAMAGE_TARGETED_PEG_HITS];
 		t._active = false;
 	}
-	[HarmonyPatch(typeof(Battle.TargetingManager), "AttemptDamageTargetedEnemy")]
+}
+
+[HarmonyPatch]
+public class PoppingCorn : HealingCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.HEAL_ON_PEG_HITS;
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		PoppingCorn t = (PoppingCorn)Tracker.trackers[Relics.RelicEffect.HEAL_ON_PEG_HITS];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
 	[HarmonyPostfix]
-	private static void Damage(bool __result) {
-		if (!__result)
-			return;
-		MentalMantle t = (MentalMantle)Tracker.trackers[Relics.RelicEffect.DAMAGE_TARGETED_PEG_HITS];
-		if (t._active)
-			t.count++;
+	private static void Disable() {
+		PoppingCorn t = (PoppingCorn)Tracker.trackers[Relics.RelicEffect.HEAL_ON_PEG_HITS];
 		t._active = false;
 	}
-	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
-public class PoppingCorn : TodoTracker {
-	public override Relics.RelicEffect Relic => Relics.RelicEffect.HEAL_ON_PEG_HITS;
-}
-
-public class WeaponizedEnvy : TodoTracker {
+[HarmonyPatch]
+public class WeaponizedEnvy : DamageTargetedCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_TARGETED_ON_HEAL;
+	[HarmonyPatch(typeof(Battle.TargetingManager), "HandlePlayerHealed")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		WeaponizedEnvy t = (WeaponizedEnvy)Tracker.trackers[Relics.RelicEffect.DAMAGE_TARGETED_ON_HEAL];
+		t._active = false;
+	}
 }
 
-public class WandofSkulltimateWrath : TodoTracker {
+[HarmonyPatch]
+public class WandofSkulltimateWrath : SelfDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG;
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		WandofSkulltimateWrath t = (WandofSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		WandofSkulltimateWrath t = (WandofSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
+		t._active = false;
+	}
+	// TODO: Also track how much damage it adds to shots
 }
 
-public class RingofReuse : TodoTracker {
+public class RingofReuse : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_PERSIST;
 }
 
-public class EchoChamber : TodoTracker {
+public class EchoChamber : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ATTACKS_ECHO;
 }
 
 public class GrabbyHand : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.FLYING_HORIZONTAL_PIERCE;
+	// TODO: the relics that affect projectiles are going to be a pain
 }
 
-public class KnifesEdge : TodoTracker {
+public class KnifesEdge : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOW_HEALTH_GUARANTEED_CRIT;
+	public override string Tooltip => $"{count} crit{Utils.Plural(count)}";
 }
 
 public class BasicBlade : TodoTracker {

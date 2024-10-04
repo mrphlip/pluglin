@@ -88,6 +88,17 @@ public abstract class HealingCounter : SimpleCounter {
 	public override string Tooltip => $"{count} <style=heal>healed</style>";
 }
 
+public abstract class SelfDamageCounter : SimpleCounter {
+	protected bool _active = false;
+	public override void Used() {}
+	public virtual void SelfDamage(float amount) {
+		if (_active)
+			count += (int)amount;
+		_active = false;
+	}
+	public override string Tooltip => $"{count} <style=damage>self-damage</style>";
+}
+
 public abstract class DamageCounter : Tracker {
 	protected int goodCount = 0, badCount = 0;
 
@@ -170,6 +181,23 @@ public abstract class MultDamageCounter : DamageCounter {
 		multiplier = 1f;
 		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
 	}
+}
+
+public abstract class DamageTargetedCounter : SimpleCounter {
+	protected bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	public virtual void Damage(float amount) {
+		if (_active)
+			count += (int)amount;
+		_active = false;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
 public class Utils {

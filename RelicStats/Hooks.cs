@@ -87,6 +87,16 @@ public class Hooks {
 		}
 	}
 
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "DealSelfDamage")]
+	[HarmonyPrefix]
+	private static void SelfDamage(float damage) {
+		foreach (var tracker in Tracker.trackers.Values) {
+			SelfDamageCounter dmgtracker = tracker as SelfDamageCounter;
+			if (dmgtracker != null)
+				dmgtracker.SelfDamage(damage);
+		}
+	}
+
 	[HarmonyPatch(typeof(Battle.Attacks.Attack), "GetStatusEffects")]
 	[HarmonyPostfix]
 	public static void AttackEffects(List<Battle.StatusEffects.StatusEffect> __result) {
@@ -99,6 +109,22 @@ public class Hooks {
 				SimpleCounter tracker = (SimpleCounter)Tracker.trackers[(Relics.RelicEffect)relic];
 				tracker.count += effect.Intensity;
 			}
+		}
+	}
+
+	[HarmonyPatch(typeof(Battle.TargetingManager), "AttemptDamageTargetedEnemy")]
+	[HarmonyPostfix]
+	private static void Damage(float damage, bool __result) {
+		if (!__result)
+			return;
+		foreach (var tracker in Tracker.trackers.Values) {
+			DamageTargetedCounter dmgtracker = tracker as DamageTargetedCounter;
+			if (dmgtracker != null)
+				dmgtracker.Damage(damage);
+			// This relic can't be both HealingConter and DamageTargetedCounter...
+			InfernalIngot ingot = tracker as InfernalIngot;
+			if (ingot != null)
+				ingot.Damage(damage);
 		}
 	}
 }
