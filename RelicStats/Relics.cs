@@ -1,5 +1,6 @@
 using HarmonyLib;
 using System;
+using System.Collections.Generic;
 
 namespace RelicStats;
 
@@ -25,14 +26,38 @@ public class AlchemistCookbook : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"BOMB_REGULAR\"> created";
 }
 
+[HarmonyPatch]
 public class Cookie : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HEAL_ON_REFRESH_POTION;
-	public override int? HealAmount => (int?)Utils.GetResource<Relics.RelicManager>()?.REFRESH_POTION_HEAL_AMOUNT;
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckForRelicOnRefreshPotion")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		Cookie t = (Cookie)Tracker.trackers[Relics.RelicEffect.HEAL_ON_REFRESH_POTION];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckForRelicOnRefreshPotion")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		Cookie t = (Cookie)Tracker.trackers[Relics.RelicEffect.HEAL_ON_REFRESH_POTION];
+		t._active = false;
+	}
 }
 
+[HarmonyPatch]
 public class WellDoneSteak : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HEAL_ON_RELOAD;
-	public override int? HealAmount => (int)Relics.RelicManager.HEAL_ON_RELOAD_AMOUNT;
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckForRelicOnReload")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		WellDoneSteak t = (WellDoneSteak)Tracker.trackers[Relics.RelicEffect.HEAL_ON_RELOAD];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckForRelicOnReload")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		WellDoneSteak t = (WellDoneSteak)Tracker.trackers[Relics.RelicEffect.HEAL_ON_RELOAD];
+		t._active = false;
+	}
 }
 
 public class BagOfOrangePegs : MultDamageCounter {
@@ -236,60 +261,110 @@ public class CursedMask : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CONFUSION_RELIC;
 }
 
-public class SealedConviction : TodoTracker {
+[HarmonyPatch]
+public class SealedConviction : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NO_DISCARD;
-	// TODO: check impl for new Ballance based version, count stacks of ballance added?
+	public override int Step => Relics.RelicManager.SEALED_CONVICTION_BALLANCE;
+	private bool _active = false;
+	public override void Used() {
+		if (_active)
+			count += Step;
+	}
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStartingBonuses")]
+	[HarmonyPrefix]
+	private static void BattleStartPre() {
+		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStartingBonuses")]
+	[HarmonyPostfix]
+	private static void BattleStartPost() {
+		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(BattleController), "ShuffleDeck")]
+	[HarmonyPrefix]
+	private static void ReloadPre() {
+		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(BattleController), "ShuffleDeck")]
+	[HarmonyPostfix]
+	private static void ReloadPost() {
+		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} <style=balance>ballance added</style>";
 }
 
 public class Electropegnet : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.PEG_MAGNET;
 }
 
-public class SuperBoots : TodoTracker {
+[HarmonyPatch]
+public class SuperBoots : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SUPER_BOOTS;
+	[HarmonyPatch(typeof(Battle.PostBattleController), "TriggerVictory")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		SuperBoots t = (SuperBoots)Tracker.trackers[Relics.RelicEffect.SUPER_BOOTS];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PostBattleController), "TriggerVictory")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		SuperBoots t = (SuperBoots)Tracker.trackers[Relics.RelicEffect.SUPER_BOOTS];
+		t._active = false;
+	}
 }
 
-public class SpecialButton : TodoTracker {
+public class SpecialButton : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_CRIT1;
 }
 
-public class FreshBandana : TodoTracker {
+public class FreshBandana : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REFRESH1;
 }
 
 public class MonsterTraining : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOW_HEALTH_INCREASED_DAMAGE;
+	// TODO: need to figure out a good way to trace the effect of this one
 }
 
-public class Refreshiv : TodoTracker {
+public class Refreshiv : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_BOARD_ON_ENEMY_KILLED;
+	public override string Tooltip => $"{count} refresh{Utils.Plural(count, "es")}";
 }
 
-public class TacticalTreat : TodoTracker {
+public class TacticalTreat : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SHUFFLE_REFRESH_PEG;
 }
 
-public class UnicornHorn : TodoTracker {
+public class UnicornHorn : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LONGER_AIMER;
 }
 
 public class RallyingHeart : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL;
+	// TODO: A bit tricky, saving this one for later
 }
 
-public class SuffertheSling : TodoTracker {
+public class SuffertheSling : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BASIC_STONE_BONUS_DAMAGE;
 }
 
-public class SandArrows : TodoTracker {
+public class SandArrows : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ATTACKS_DEAL_BLIND;
+	public override void Used() {}
+	public override string Tooltip => $"{count} <style=blind>blind applied</style>";
 }
 
 public class Overwhammer : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NORMAL_ATTACKS_OVERFLOW;
+	// TODO: the relics that affect projectiles are going to be a pain
 }
 
-public class InconspicuousRing : TodoTracker {
+public class InconspicuousRing : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOUNCERS_COUNT;
 }
 
@@ -299,16 +374,160 @@ public class OldGardenerGloves : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
-public class SlimySalve : TodoTracker {
+[HarmonyPatch]
+public class SlimySalve : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.APPLIES_HEALING_SLIME;
+	private bool _sliming = false;
+	private HashSet<int> slimedPegs = new HashSet<int>();
+	public override void Reset() {
+		base.Reset();
+		_sliming = false;
+		slimedPegs.Clear();
+	}
+	public override void Used() {
+		_sliming = true;
+	}
+	[HarmonyPatch(typeof(RegularPeg), "CheckAndApplySlime")]
+	[HarmonyPostfix]
+	private static void CheckApplySlimeRegularPost() {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		t._sliming = false;
+	}
+	[HarmonyPatch(typeof(LongPeg), "CheckAndApplySlime")]
+	[HarmonyPostfix]
+	private static void CheckApplySlimeLongPost() {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		t._sliming = false;
+	}
+	[HarmonyPatch(typeof(RegularPeg), "ApplySlimeToPeg")]
+	[HarmonyPostfix]
+	private static void ApplySlimeRegular(RegularPeg __instance, Peg.SlimeType sType) {
+		if (sType != Peg.SlimeType.HealSlime)
+			return;
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		if (!t._sliming)
+			return;
+		t.slimedPegs.Add(__instance.gameObject.GetInstanceID());
+		t._sliming = false;
+	}
+	[HarmonyPatch(typeof(LongPeg), "ApplySlimeToPeg")]
+	[HarmonyPostfix]
+	private static void ApplySlimeLong(LongPeg __instance, Peg.SlimeType sType) {
+		if (sType != Peg.SlimeType.HealSlime)
+			return;
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		if (!t._sliming)
+			return;
+		t.slimedPegs.Add(__instance.gameObject.GetInstanceID());
+		t._sliming = false;
+	}
+	[HarmonyPatch(typeof(Battle.PegManager), "InitializePegs")]
+	[HarmonyPostfix]
+	private static void NewBattle() {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		t.slimedPegs.Clear();
+		t._sliming = false;
+	}
+	[HarmonyPatch(typeof(RegularPeg), "PegActivated")]
+	[HarmonyPrefix]
+	private static void EnableRegular(RegularPeg __instance) {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		if (!t.slimedPegs.Contains(__instance.gameObject.GetInstanceID()))
+			return;
+		if (__instance.slimeType != Peg.SlimeType.HealSlime) {
+			t.slimedPegs.Remove(__instance.gameObject.GetInstanceID());
+			return;
+		}
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(RegularPeg), "PegActivated")]
+	[HarmonyPostfix]
+	private static void DisableRegular() {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(LongPeg), "PegActivated")]
+	[HarmonyPrefix]
+	private static void EnableLong(LongPeg __instance) {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		if (!t.slimedPegs.Contains(__instance.gameObject.GetInstanceID()))
+			return;
+		if (__instance.slimeType != Peg.SlimeType.HealSlime) {
+			t.slimedPegs.Remove(__instance.gameObject.GetInstanceID());
+			return;
+		}
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(LongPeg), "PegActivated")]
+	[HarmonyPostfix]
+	private static void DisableLong() {
+		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
+		t._active = false;
+	}
 }
 
-public class InfernalIngot : TodoTracker {
+[HarmonyPatch]
+public class InfernalIngot : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LIFESTEAL_PEG_HITS;
+	private bool _damageActive = false;
+	private int damageCount = 0;
+	public override void Reset() {
+		base.Reset();
+		_damageActive = false;
+		damageCount = 0;
+	}
+	public override void Used() {
+		_active = true;
+		_damageActive = false;
+	}
+	[HarmonyPatch(typeof(Battle.TargetingManager), "HandlePegActivated")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		InfernalIngot t = (InfernalIngot)Tracker.trackers[Relics.RelicEffect.LIFESTEAL_PEG_HITS];
+		t._active = false;
+		t._damageActive = false;
+	}
+	[HarmonyPatch(typeof(Battle.TargetingManager), "AttemptDamageTargetedEnemy")]
+	[HarmonyPostfix]
+	private static void Damage(bool __result) {
+		if (!__result)
+			return;
+		InfernalIngot t = (InfernalIngot)Tracker.trackers[Relics.RelicEffect.LIFESTEAL_PEG_HITS];
+		if (t._damageActive)
+			t.damageCount++;
+		t._damageActive = false;
+	}
+	public override string Tooltip => $"{damageCount} <style=damage>damage dealt</style>; {base.Tooltip}";
 }
 
-public class MentalMantle : TodoTracker {
+[HarmonyPatch]
+public class MentalMantle : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_TARGETED_PEG_HITS;
+	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Battle.TargetingManager), "HandlePegActivated")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		MentalMantle t = (MentalMantle)Tracker.trackers[Relics.RelicEffect.DAMAGE_TARGETED_PEG_HITS];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.TargetingManager), "AttemptDamageTargetedEnemy")]
+	[HarmonyPostfix]
+	private static void Damage(bool __result) {
+		if (!__result)
+			return;
+		MentalMantle t = (MentalMantle)Tracker.trackers[Relics.RelicEffect.DAMAGE_TARGETED_PEG_HITS];
+		if (t._active)
+			t.count++;
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
 public class PoppingCorn : TodoTracker {

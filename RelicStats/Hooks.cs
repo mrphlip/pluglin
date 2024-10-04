@@ -1,4 +1,5 @@
 using HarmonyLib;
+using System.Collections.Generic;
 
 namespace RelicStats;
 
@@ -73,6 +74,31 @@ public class Hooks {
 			MultDamageCounter dmgtracker = tracker as MultDamageCounter;
 			if (dmgtracker != null)
 				dmgtracker.AddDamageMultiplier(mult);
+		}
+	}
+
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "Heal")]
+	[HarmonyPostfix]
+	private static void Heal(float amount, float __result) {
+		foreach (var tracker in Tracker.trackers.Values) {
+			HealingCounter healtracker = tracker as HealingCounter;
+			if (healtracker != null)
+				healtracker.Heal(__result);
+		}
+	}
+
+	[HarmonyPatch(typeof(Battle.Attacks.Attack), "GetStatusEffects")]
+	[HarmonyPostfix]
+	public static void AttackEffects(List<Battle.StatusEffects.StatusEffect> __result) {
+		foreach (Battle.StatusEffects.StatusEffect effect in __result) {
+			Relics.RelicEffect? relic = effect.EffectType switch {
+				Battle.StatusEffects.StatusEffectType.Blind => Relics.RelicEffect.ATTACKS_DEAL_BLIND,
+				_ => null,
+			};
+			if (relic != null && Tracker.HaveRelic((Relics.RelicEffect)relic)) {
+				SimpleCounter tracker = (SimpleCounter)Tracker.trackers[(Relics.RelicEffect)relic];
+				tracker.count += effect.Intensity;
+			}
 		}
 	}
 }

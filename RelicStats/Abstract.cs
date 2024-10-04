@@ -64,7 +64,7 @@ public abstract class NoopTracker : Tracker {
 public abstract class TodoTracker : NoopTracker {}
 
 public abstract class SimpleCounter : Tracker {
-	protected int count = 0;
+	public int count = 0;
 
 	public virtual int Step => 1;
 	public override void Reset() { count = 0; }
@@ -78,17 +78,13 @@ public abstract class SimpleCounter : Tracker {
 }
 
 public abstract class HealingCounter : SimpleCounter {
-	public abstract int? HealAmount { get; }
-	public override int Step { get {
-		Battle.PlayerHealthController controller = Utils.GetResource<Battle.PlayerHealthController>();
-		FloatVariable health = Utils.GetAttr<Battle.PlayerHealthController, FloatVariable>(controller, "_playerHealth");
-		FloatVariable maxhealth = Utils.GetAttr<Battle.PlayerHealthController, FloatVariable>(controller, "_maxPlayerHealth");
-		float amount = Mathf.Min(HealAmount ?? 0, maxhealth.Value - health.Value);
-		if (amount > 0f)
-			return (int)amount;
-		else
-			return 0;
-	}}
+	protected bool _active = false;
+	public override void Used() {}
+	public virtual void Heal(float amount) {
+		if (_active)
+			count += (int)amount;
+		_active = false;
+	}
 	public override string Tooltip => $"{count} <style=heal>healed</style>";
 }
 
