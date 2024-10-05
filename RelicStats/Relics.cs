@@ -167,6 +167,12 @@ public class ShortFuse : SimpleCounter {
 
 public class StrangeBrew : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.POTION_PEGS_COUNT;
+	[HarmonyPatch(typeof(BattleController), "HandlePegActivated")]
+	[HarmonyPrefix]
+	private static void Disable() {
+		StrangeBrew t = (StrangeBrew)Tracker.trackers[Relics.RelicEffect.POTION_PEGS_COUNT];
+		t._active = false;
+	}
 }
 
 public class LuckyPenny : NoopTracker {
@@ -326,9 +332,18 @@ public class FreshBandana : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REFRESH1;
 }
 
-public class MonsterTraining : TodoTracker {
+public class MonsterTraining : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOW_HEALTH_INCREASED_DAMAGE;
-	// TODO: need to figure out a good way to trace the effect of this one
+	public override void StartAddPeg() {
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	public override void AddPeg(float multiplier, int bonus) {
+		// Only half the multiplier, and none of the bonus, can be attributed to this relic
+		base.AddPeg(multiplier / 2f, 0);
+	}
 }
 
 public class Refreshiv : SimpleCounter {
@@ -534,22 +549,44 @@ public class WeaponizedEnvy : DamageTargetedCounter {
 	}
 }
 
-[HarmonyPatch]
-public class WandofSkulltimateWrath : SelfDamageCounter {
+public class WandofSkulltimateWrath : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG;
+	public override void StartAddPeg() {
+		_active = false;
+	}
+	public override void Used() {}
+	public override void Checked() {
+		_active = true;
+	}
+	public override void AddPeg(float multiplier, int bonus) {
+		base.AddPeg(multiplier / 2f, 0);
+	}
+
+	private bool _selfDamageActive = false;
+	private int selfDamageCount = 0;
+	public override void Reset() {
+		base.Reset();
+		_selfDamageActive = false;
+		selfDamageCount = 0;
+	}
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
 	[HarmonyPrefix]
 	private static void Enable() {
 		WandofSkulltimateWrath t = (WandofSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
-		t._active = true;
+		t._selfDamageActive = true;
 	}
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
 	[HarmonyPostfix]
 	private static void Disable() {
 		WandofSkulltimateWrath t = (WandofSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
-		t._active = false;
+		t._selfDamageActive = false;
 	}
-	// TODO: Also track how much damage it adds to shots
+	public virtual void SelfDamage(float amount) {
+		if (_selfDamageActive)
+			selfDamageCount += (int)amount;
+		_selfDamageActive = false;
+	}
+	public override string Tooltip => $"{base.Tooltip}; {selfDamageCount} <style=damage>self-damage</style>";
 }
 
 public class RingofReuse : NoopTracker {

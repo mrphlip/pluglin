@@ -27,7 +27,7 @@ public class Hooks {
 
 	[HarmonyPatch(typeof(Relics.RelicManager), "AttemptUseRelic")]
 	[HarmonyPostfix]
-	static private void RelicUsed(Relics.RelicManager __instance, Relics.RelicEffect re, bool __result) {
+	static private void RelicUsed(Relics.RelicEffect re, bool __result) {
 		if (__result) {
 			Tracker tracker = null;
 			if (Tracker.trackers.TryGetValue(re, out tracker)) {
@@ -36,6 +36,17 @@ public class Hooks {
 		}
 	}
 	// todo: AttemptUseCountdownRelicManyTimes for COINS_PROVIDE_HEALING
+
+	[HarmonyPatch(typeof(Relics.RelicManager), "RelicEffectActive")]
+	[HarmonyPostfix]
+	static private void RelicChecked(Relics.RelicEffect re, bool __result) {
+		if (__result) {
+			Tracker tracker = null;
+			if (Tracker.trackers.TryGetValue(re, out tracker)) {
+				tracker.Checked();
+			}
+		}
+	}
 
 	public static float? damageBeingDealt = null;
 
@@ -77,6 +88,44 @@ public class Hooks {
 		}
 	}
 
+	private static int prevDamageAmountCount = 0;
+	private static int prevDamageBonus = 0;
+	[HarmonyPatch(typeof(BattleController), "AddPeg")]
+	[HarmonyPrefix]
+	private static void AddPegPre(BattleController __instance) {
+		prevDamageAmountCount = __instance.damageAmounts.Count;
+		prevDamageBonus = Utils.GetAttr<BattleController, int>(__instance, "_damageBonus");
+		foreach (var tracker in Tracker.trackers.Values) {
+			PegDamageCounter dmgtracker = tracker as PegDamageCounter;
+			if (dmgtracker != null)
+				dmgtracker.StartAddPeg();
+		}
+	}
+	[HarmonyPatch(typeof(BattleController), "AddPeg")]
+	[HarmonyPostfix]
+	private static void AddPegPost(BattleController __instance) {
+		float damageAdded = 0;
+		for (int i = prevDamageAmountCount; i < __instance.damageAmounts.Count; i++)
+			damageAdded += __instance.damageAmounts[i];
+		int damageBonus = Utils.GetAttr<BattleController, int>(__instance, "_damageBonus");
+		damageBonus -= prevDamageBonus;
+		foreach (var tracker in Tracker.trackers.Values) {
+			PegDamageCounter dmgtracker = tracker as PegDamageCounter;
+			if (dmgtracker != null)
+				dmgtracker.AddPeg(damageAdded, damageBonus);
+		}
+	}
+	[HarmonyPatch(typeof(BattleController), "GrantAdditionalBasicPeg")]
+	[HarmonyPrefix]
+	private static void GrantAdditionalBasicPegPre(BattleController __instance) {
+		AddPegPre(__instance);
+	}
+	[HarmonyPatch(typeof(BattleController), "GrantAdditionalBasicPeg")]
+	[HarmonyPostfix]
+	private static void GrantAdditionalBasicPegPost(BattleController __instance) {
+		AddPegPost(__instance);
+	}
+
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "Heal")]
 	[HarmonyPostfix]
 	private static void Heal(float amount, float __result) {
@@ -94,6 +143,10 @@ public class Hooks {
 			SelfDamageCounter dmgtracker = tracker as SelfDamageCounter;
 			if (dmgtracker != null)
 				dmgtracker.SelfDamage(damage);
+			// This relic can't be both PegDamageCounter and SelfDamageCounter...
+			WandofSkulltimateWrath wand = tracker as WandofSkulltimateWrath;
+			if (wand != null)
+				wand.SelfDamage(damage);
 		}
 	}
 

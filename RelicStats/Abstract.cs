@@ -14,6 +14,7 @@ public abstract class Tracker {
 public abstract string Tooltip { get; }
 	public abstract object State { get; set; }
 	public abstract void Used();
+	public virtual void Checked() {}
 
 
 	public static readonly Dictionary<Relics.RelicEffect, Tracker> trackers = new Dictionary<Relics.RelicEffect, Tracker>();
@@ -132,19 +133,31 @@ public abstract class DamageCounter : Tracker {
 [HarmonyPatch]
 public abstract class PegDamageCounter : DamageCounter {
 	public virtual int Step => 1;
-	private int activate_count = 0;
+	protected bool _active = false;
+	private float peg_count = 0;
+	private int bonus_count = 0;
 	public override void Reset() {
 		base.Reset();
-		activate_count = 0;
+		_active = false;
+		peg_count = bonus_count = 0;
 	}
 	public override void Used() {
-		activate_count += Step;
+		_active = true;
+	}
+	public virtual void StartAddPeg() {}
+	public virtual void AddPeg(float multiplier, int bonus) {
+		if (_active) {
+			peg_count += multiplier;
+			bonus_count += bonus;
+		}
+		_active = false;
 	}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
 		float[] newDmgValues = new float[dmgValues.Length + 1];
-		newDmgValues = dmgValues.Append(-activate_count).ToArray();
-		activate_count = 0;
-		return attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus, critCount, false);
+		newDmgValues = dmgValues.Append(-peg_count).ToArray();
+		float baseDamage = attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus - bonus_count, critCount, false);
+		peg_count = bonus_count = 0;
+		return baseDamage;
 	}
 }
 [HarmonyPatch]
