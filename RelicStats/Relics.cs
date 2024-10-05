@@ -96,30 +96,13 @@ public class RoundGuard : SimpleCounter {
 }
 
 [HarmonyPatch]
-public class Refillibuster : SimpleCounter {
+public class Refillibuster : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_DAMAGES_PEG_COUNT;
-
-	public Refillibuster() {
-		Battle.Enemies.Enemy.OnAllEnemiesDamaged += new Battle.Enemies.Enemy.DamageAllEnemies(this.DamageAllEnemies);
-	}
-
-	private bool _active = false;
-	public override void Used() {
-		_active = true;
-	}
 	[HarmonyPatch(typeof(Battle.PegManager), "ResetPegs")]
 	[HarmonyPostfix]
 	private static void AfterResetPegs() {
 		((Refillibuster)Tracker.trackers[Relics.RelicEffect.REFRESH_DAMAGES_PEG_COUNT])._active = false;
 	}
-	private void DamageAllEnemies(float damageAmount) {
-		if (_active) {
-			count += Utils.EnemyDamageCount() * (int)damageAmount;
-			_active = false;
-		}
-	}
-
-	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
 [HarmonyPatch]
@@ -607,76 +590,153 @@ public class KnifesEdge : SimpleCounter {
 	public override string Tooltip => $"{count} crit{Utils.Plural(count)}";
 }
 
-public class BasicBlade : TodoTracker {
+public class BasicBlade : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NON_CRIT_BONUS_DMG;
 }
 
-public class CritsomallosFleece : TodoTracker {
+public class CritsomallosFleece : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRITS_STACK;
 }
 
-public class EyeofTurtle : TodoTracker {
+[HarmonyPatch]
+public class EyeofTurtle : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS;
+	private bool orbActive = false, relicActive = false;
+	private int orbCount = 0, relicCount = 0;
+	public override void Reset() {
+		orbActive = relicActive = false;
+		orbCount = relicCount = 0;
+	}
+	public override void Used() {
+		if (orbActive)
+			orbCount++;
+		if (relicActive)
+			relicCount++;
+		orbActive = relicActive = false;
+	}
+	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
+	[HarmonyPrefix]
+	private static void EnableOrb() {
+		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		t.orbActive = true;
+		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
+		t2.orbActive = true;
+	}
+	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
+	[HarmonyPostfix]
+	private static void DisableOrb() {
+		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		t.orbActive = false;
+		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
+		t2.orbActive = false;
+	}
+	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
+	[HarmonyPrefix]
+	private static void EnableRelic(bool isTreasure) {
+		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		t.relicActive = !isTreasure;
+		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
+		t2.relicActive = true;
+	}
+	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
+	[HarmonyPostfix]
+	private static void DisableRelic() {
+		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		t.relicActive = false;
+		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
+		t2.relicActive = false;
+	}
+	public override string Tooltip => $"{orbCount} extra orb{Utils.Plural(orbCount)}; {relicCount} extra relic{Utils.Plural(relicCount)}";
 }
 
 public class GloriousSuffeRing : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_BUFF;
+	// TODO: Should this also try to count the debuffs on pegs as "damage lost"?
 }
 
-public class SapperSack : TodoTracker {
+public class SapperSack : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_BOMBS_RIGGED;
 }
 
-public class Bombulet : TodoTracker {
+public class Bombulet : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_BOMBS_ON_MAP;
 }
 
-public class BombBaton : TodoTracker {
+public class BombBaton : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_STARTING_BOMBS;
 }
 
-public class PowderCollector : TodoTracker {
+public class PowderCollector : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPAWN_BOMB_ON_PEG_HITS;
+	public override string Tooltip => $"{count} <sprite name=\"BOMB_REGULAR\"> created";
 }
 
-public class BadCheese : TodoTracker {
+[HarmonyPatch]
+public class BadCheese : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_ENEMIES_ON_RELOAD;
+	[HarmonyPatch(typeof(BattleController), "DealCheeseDamage")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		((BadCheese)Tracker.trackers[Relics.RelicEffect.DAMAGE_ENEMIES_ON_RELOAD])._active = true;
+	}
+	[HarmonyPatch(typeof(BattleController), "DealCheeseDamage")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		((BadCheese)Tracker.trackers[Relics.RelicEffect.DAMAGE_ENEMIES_ON_RELOAD])._active = false;
+	}
 }
 
-public class RingofPain : TodoTracker {
+[HarmonyPatch]
+public class RingofPain : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_RETURN;
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AttemptDamageReturn")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		((RingofPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AttemptDamageReturn")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		((RingofPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = false;
+	}
 }
 
-public class PerfectedReactant : TodoTracker {
+public class PerfectedReactant : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_BOMB_DAMAGE2;
+	public override int Step => (int)(Utils.EnemyDamageCount() * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE2);
+	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
-public class DodgyShortcut : TodoTracker {
+public class DodgyShortcut : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRIT_PIT;
 }
 
-public class CrumpledCharacterSheet : TodoTracker {
+public class CrumpledCharacterSheet : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_ENEMY_HEALTH;
 }
 
-public class CurseofthePeglinKing : TodoTracker {
+public class CurseofthePeglinKing : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALTERNATE_SHOT_POWER;
 }
 
-public class AncientMeteorite : TodoTracker {
+public class AncientMeteorite : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LEGACY_METEORITE;
+	public override string Tooltip => $"{count} explosive force{Utils.Plural(count)}";
 }
 
-public class DumbBell : TodoTracker {
+public class DumbBell : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.STR_ON_RELOAD;
+	public override int Step => 2;
+	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
 }
 
-public class TheCake : TodoTracker {
+public class TheCake : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MAX_HEALTH_LARGE;
 }
 
-public class Refreshield : TodoTracker {
+public class Refreshield : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_BOARD_ON_RELOAD;
+	public override string Tooltip => $"{count} refresh{Utils.Plural(count, "es")}";
 }
 
 public class Puppet : TodoTracker {
@@ -763,7 +823,7 @@ public class Critikris : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRIT_DAMAGES_ENEMIES;
 }
 
-public class Peglintuition : TodoTracker {
+public class Peglintuition : EyeofTurtle {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES;
 }
 

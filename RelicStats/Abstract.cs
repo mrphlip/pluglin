@@ -213,6 +213,25 @@ public abstract class DamageTargetedCounter : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
+public abstract class DamageAllCounter : SimpleCounter {
+	public DamageAllCounter() {
+		Battle.Enemies.Enemy.OnAllEnemiesDamaged += new Battle.Enemies.Enemy.DamageAllEnemies(this.DamageAllEnemies);
+	}
+
+	protected bool _active = false;
+	public override void Used() {
+		_active = true;
+	}
+	private void DamageAllEnemies(float damageAmount) {
+		if (_active) {
+			count += Utils.EnemyDamageCount() * (int)damageAmount;
+			_active = false;
+		}
+	}
+
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
+}
+
 public class Utils {
 	static public T GetResource<T>() where T : UnityEngine.Object {
 		T[] objs = Resources.FindObjectsOfTypeAll<T>();
