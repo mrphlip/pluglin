@@ -132,7 +132,7 @@ public class Hooks {
 			if (dmgtracker != null)
 				dmgtracker.SelfDamage(damage);
 			// This relic can't be both PegDamageCounter and SelfDamageCounter...
-			WandofSkulltimateWrath wand = tracker as WandofSkulltimateWrath;
+			WandOfSkulltimateWrath wand = tracker as WandOfSkulltimateWrath;
 			if (wand != null)
 				wand.SelfDamage(damage);
 		}
@@ -302,6 +302,8 @@ public class Transpilers {
 
 		bool foundRoundGuard = false;
 		bool foundPuppet = false;
+		bool foundSash = false;
+		bool foundCounter = false;
 
 		for (int i = 0; i < code.Count; i++) {
 			// Round Guard
@@ -350,6 +352,50 @@ public class Transpilers {
 				continue;
 			}
 
+			// Sash of Focus
+			if (
+				IsLoadArg(code[i]) == 0 &&
+				IsLoadField(code[i+1])?.Name == "_relicManager" &&
+				IsLoadConstInt(code[i+2]) == (int)Relics.RelicEffect.PREVENT_LETHAL_DAMAGE &&
+				IsCallMethod(code[i+3])?.Name == "AttemptUseRelic" &&
+				IsBranchFalse(code[i+4]) &&
+				IsLoadConstFloat(code[i+5]) == 0f &&
+				IsStore(code[i+6])
+			) {
+				CodeInstruction op1 = LoadFromStore(code[i+6]);
+				CodeInstruction op2 = MakeCall(typeof(Transpilers).GetMethod("PreventLethalDamage"));
+				if (code[i+5].labels.Count > 0) {
+					op1.labels = code[i+5].labels;
+					code[i+5].labels = [];
+				}
+				code.Insert(i+5, op2);
+				code.Insert(i+5, op1);
+				i+=6;
+				foundSash = true;
+				continue;
+			}
+
+			// Ripostal Service
+			if (
+				IsLoadArg(code[i]) == 0 &&
+				IsLoadField(code[i+1])?.Name == "_relicManager" &&
+				IsLoadConstInt(code[i+2]) == (int)Relics.RelicEffect.BALLWARK_COUNTER &&
+				IsCallMethod(code[i+3])?.Name == "AttemptUseRelic" &&
+				IsBranchFalse(code[i+4]) &&
+				IsLoadArg(code[i+5]) != null &&
+				IsLoadArg(code[i+6]) == 0 &&
+				IsLoadField(code[i+7])?.Name == "_armour" &&
+				IsLoadConstFloat(code[i+8]) != null &&
+				code[i+9].opcode == OpCodes.Mul
+			) {
+				CodeInstruction op1 = new CodeInstruction(OpCodes.Dup, null);
+				CodeInstruction op2 = MakeCall(typeof(Transpilers).GetMethod("BallwarkCounter"));
+				code.Insert(i+10, op2);
+				code.Insert(i+10, op1);
+				i+=10;
+				foundCounter = true;
+				continue;
+			}
 		}
 
 		if (!foundRoundGuard) {
@@ -360,6 +406,14 @@ public class Transpilers {
 			Plugin.Logger.LogError("Couldn't find Puppet code in PlayerHealthController.Damage");
 			return null;
 		}
+		if (!foundSash) {
+			Plugin.Logger.LogError("Couldn't find Sash of Focus code in PlayerHealthController.Damage");
+			return null;
+		}
+		if (!foundCounter) {
+			Plugin.Logger.LogError("Couldn't find Ripostal Service code in PlayerHealthController.Damage");
+			return null;
+		}
 
 		code.Insert(0, MakeCall(typeof(Transpilers).GetMethod("DamagePre")));
 
@@ -368,6 +422,7 @@ public class Transpilers {
 
 	public static void DamagePre() {
 		((RoundGuard)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_ON_RELOAD]).Disable();
+		((SeraphicShield)Tracker.trackers[Relics.RelicEffect.IMMORTAL]).Disable();
 	}
 
 	public static void NoDamageOnReload(float amount) {
@@ -376,6 +431,14 @@ public class Transpilers {
 	}
 
 	public static void PreventFirstDamage(float amount) {
-		((Puppet)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_ON_RELOAD]).DamageAvoided(amount);
+		((Puppet)Tracker.trackers[Relics.RelicEffect.PREVENT_FIRST_DAMAGE]).DamageAvoided(amount);
+	}
+
+	public static void PreventLethalDamage(float amount) {
+		((SashOfFocus)Tracker.trackers[Relics.RelicEffect.PREVENT_LETHAL_DAMAGE]).DamageAvoided(amount);
+	}
+
+	public static void BallwarkCounter(float amount) {
+		((RipostalService)Tracker.trackers[Relics.RelicEffect.BALLWARK_COUNTER]).Damage(amount);
 	}
 }

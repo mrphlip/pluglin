@@ -1,6 +1,7 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace RelicStats;
 
@@ -357,7 +358,7 @@ public class RallyingHeart : TodoTracker {
 	// TODO: A bit tricky, saving this one for later
 }
 
-public class SuffertheSling : OrbDamageCounter {
+public class SufferTheSling : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BASIC_STONE_BONUS_DAMAGE;
 }
 
@@ -542,7 +543,7 @@ public class WeaponizedEnvy : DamageTargetedCounter {
 	}
 }
 
-public class WandofSkulltimateWrath : PegDamageCounter {
+public class WandOfSkulltimateWrath : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG;
 	public override void StartAddPeg() {
 		_active = false;
@@ -565,13 +566,13 @@ public class WandofSkulltimateWrath : PegDamageCounter {
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
 	[HarmonyPrefix]
 	private static void Enable() {
-		WandofSkulltimateWrath t = (WandofSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
+		WandOfSkulltimateWrath t = (WandOfSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
 		t._selfDamageActive = true;
 	}
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
 	[HarmonyPostfix]
 	private static void Disable() {
-		WandofSkulltimateWrath t = (WandofSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
+		WandOfSkulltimateWrath t = (WandOfSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
 		t._selfDamageActive = false;
 	}
 	public virtual void SelfDamage(float amount) {
@@ -582,7 +583,7 @@ public class WandofSkulltimateWrath : PegDamageCounter {
 	public override string Tooltip => $"{base.Tooltip}; {selfDamageCount} <style=damage>self-damage</style>";
 }
 
-public class RingofReuse : NoopTracker {
+public class RingOfReuse : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_PERSIST;
 }
 
@@ -609,7 +610,7 @@ public class CritsomallosFleece : OrbDamageCounter {
 }
 
 [HarmonyPatch]
-public class EyeofTurtle : SimpleCounter {
+public class EyeOfTurtle : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS;
 	private bool orbActive = false, relicActive = false;
 	private int orbCount = 0, relicCount = 0;
@@ -627,7 +628,7 @@ public class EyeofTurtle : SimpleCounter {
 	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
 	[HarmonyPrefix]
 	private static void EnableOrb() {
-		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
 		t.orbActive = true;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
 		t2.orbActive = true;
@@ -635,7 +636,7 @@ public class EyeofTurtle : SimpleCounter {
 	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
 	[HarmonyPostfix]
 	private static void DisableOrb() {
-		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
 		t.orbActive = false;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
 		t2.orbActive = false;
@@ -643,7 +644,7 @@ public class EyeofTurtle : SimpleCounter {
 	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
 	[HarmonyPrefix]
 	private static void EnableRelic(bool isTreasure) {
-		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
 		t.relicActive = !isTreasure;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
 		t2.relicActive = true;
@@ -651,7 +652,7 @@ public class EyeofTurtle : SimpleCounter {
 	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
 	[HarmonyPostfix]
 	private static void DisableRelic() {
-		EyeofTurtle t = (EyeofTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
+		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
 		t.relicActive = false;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
 		t2.relicActive = false;
@@ -697,17 +698,17 @@ public class BadCheese : DamageAllCounter {
 }
 
 [HarmonyPatch]
-public class RingofPain : DamageAllCounter {
+public class RingOfPain : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_RETURN;
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AttemptDamageReturn")]
 	[HarmonyPrefix]
 	private static void Enable() {
-		((RingofPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = true;
+		((RingOfPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = true;
 	}
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AttemptDamageReturn")]
 	[HarmonyPostfix]
 	private static void Disable() {
-		((RingofPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = false;
+		((RingOfPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = false;
 	}
 }
 
@@ -725,7 +726,7 @@ public class CrumpledCharacterSheet : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_ENEMY_HEALTH;
 }
 
-public class CurseofthePeglinKing : NoopTracker {
+public class CurseOfThePeglinKing : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALTERNATE_SHOT_POWER;
 }
 
@@ -751,17 +752,9 @@ public class Refreshield : SimpleCounter {
 
 public class Puppet : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.PREVENT_FIRST_DAMAGE;
-	private bool _active = false;
-	public void Disable() {
-		_active = false;
-	}
-	public override void Used() {
-		_active = true;
-	}
+	public override void Used() {}
 	public void DamageAvoided(float damage) {
-		if (_active)
-			count += (int)damage;
-		_active = false;
+		count += (int)damage;
 	}
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
@@ -913,7 +906,7 @@ public class Critikris : DamageAllCounter {
 	}
 }
 
-public class Peglintuition : EyeofTurtle {
+public class Peglintuition : EyeOfTurtle {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES;
 }
 
@@ -952,64 +945,134 @@ public class Navigationflation : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";
 }
 
-public class DuplicationPotion : TodoTracker {
+public class DuplicationPotion : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DUPLICATE_SPECIAL_PEGS;
 }
 
-public class RefillosophersStone : TodoTracker {
+public class RefillosophersStone : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CREATE_GOLD_ON_REFRESH;
 }
 
-public class PeglinerosPendant : TodoTracker {
+[HarmonyPatch]
+public class PeglinerosPendant : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GOLD_ADDS_TO_DAMAGE;
+	[HarmonyPatch(typeof(Battle.PegBehaviour.PegCoinOverlay), "TriggerCoinCollected")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		PeglinerosPendant t = (PeglinerosPendant)Tracker.trackers[Relics.RelicEffect.GOLD_ADDS_TO_DAMAGE];
+		t._active = false;
+	}
 }
 
-public class WandofSkulltimateGreed : TodoTracker {
+public class WandOfSkulltimateGreed : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_COINS_AND_PRICES;
 }
 
-public class DefreshPotion : TodoTracker {
+public class DefreshPotion : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_MORBID;
 }
 
-public class SaltShaker : TodoTracker {
+public class SaltShaker : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_MAX_HP_GAIN;
+	public override string Tooltip => $"{count} max HP added";
 }
 
-public class GardenersGloves : TodoTracker {
+[HarmonyPatch]
+public class GardenersGloves : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REDUCE_ORB_SELF_DAMAGE;
+	private bool _active = false;
+	private float _currentDamage = 0;
+	public override void Used() {
+		if (_active)
+			count += (int)Mathf.Ceil(_currentDamage / 2);
+		_active = false;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "DealSelfDamage")]
+	[HarmonyPrefix]
+	private static void Enable(float damage) {
+		GardenersGloves t = (GardenersGloves)Tracker.trackers[Relics.RelicEffect.REDUCE_ORB_SELF_DAMAGE];
+		t._currentDamage = damage;
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "DealSelfDamage")]
+	[HarmonyPostfix]
+	private static void Disable(float damage) {
+		GardenersGloves t = (GardenersGloves)Tracker.trackers[Relics.RelicEffect.REDUCE_ORB_SELF_DAMAGE];
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
 
-public class GrindingMonstera : TodoTracker {
+public class GrindingMonstera : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAIN_MAX_HP_ON_ENEMY_DEFEAT;
+	public override string Tooltip => $"{count} max HP added";
 }
 
-public class SashofFocus : TodoTracker {
+public class SashOfFocus : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.PREVENT_LETHAL_DAMAGE;
+	public override void Used() {}
+	public void DamageAvoided(float damage) {
+		count += (int)damage;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
 
-public class PrimeRodofFrost : TodoTracker {
+public class PrimeRodOfFrost : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ATTACKS_PIERCE;
+	// TODO: the relics that affect projectiles are going to be a pain
 }
 
-public class BasaltToadem : TodoTracker {
+public class BasaltToadem : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INC_MAX_HP_IF_FULL_HP;
+	public override int Step => 4;
+	public override string Tooltip => $"{count} max HP added";
 }
 
-public class DungeonDie : TodoTracker {
+public class DungeonDie : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOMLY_ROLL_DAMAGE;
 }
 
-public class PerfectForger : TodoTracker {
+public class PerfectForger : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.UPGRADE_ADDED_ORBS;
+	public override string Tooltip => $"{count} orb{Utils.Plural(count)} upgraded";
 }
 
-public class BranchofEmber : TodoTracker {
+[HarmonyPatch]
+public class BranchOfEmber : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BLIND_BRAMBLE_COMBO;
+	private bool _active = false;
+	private int blindCount = 0, brambleCount = 0;
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "CheckForKnockOnEffects")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		BranchOfEmber t = (BranchOfEmber)Tracker.trackers[Relics.RelicEffect.BLIND_BRAMBLE_COMBO];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "ApplyStatusEffect")]
+	[HarmonyPrefix]
+	private static void Apply(Battle.StatusEffects.StatusEffect statusEffect) {
+		BranchOfEmber t = (BranchOfEmber)Tracker.trackers[Relics.RelicEffect.BLIND_BRAMBLE_COMBO];
+		if (!t._active)
+			return;
+		if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Blind)
+			t.blindCount += statusEffect.Intensity;
+		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Thorned)
+			t.brambleCount += statusEffect.Intensity;
+		t._active = false;
+	}
+	public override string Tooltip => $"{blindCount} <style=blind>Blind applied</style>; {brambleCount} <style=bramble>Bramble applied</style>";
 }
 
-public class RipostalService : TodoTracker {
+public class RipostalService : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLWARK_COUNTER;
+	public override void Used() {}
+	public void Damage(float damage) {
+		count += (int)damage;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
 public class EssentialOil : TodoTracker {
@@ -1052,11 +1115,11 @@ public class Roundreloquence : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_HIT;
 }
 
-public class MaskofSorrow : TodoTracker {
+public class MaskOfSorrow : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_NEGATIVE_STATUS;
 }
 
-public class MaskofJoy : TodoTracker {
+public class MaskOfJoy : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_POSITIVE_STATUS;
 }
 
@@ -1104,7 +1167,7 @@ public class PrimeSlime : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_SLIME_ON_PEGS_HIT;
 }
 
-public class HouseofSlime : TodoTracker {
+public class HouseOfSlime : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOUNCY_WALLS_AND_BOUNCERS;
 }
 
@@ -1256,7 +1319,7 @@ public class TornSash : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HALVE_INCOMING_DAMAGE;
 }
 
-public class CalloftheVoid : TodoTracker {
+public class CallOfTheVoid : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_DELETE_PEGS;
 }
 
