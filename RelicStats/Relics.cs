@@ -366,7 +366,7 @@ public class SufferTheSling : OrbDamageCounter {
 public class SandArrows : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ATTACKS_DEAL_BLIND;
 	public override void Used() {}
-	public override string Tooltip => $"{count} <style=blind>blind applied</style>";
+	public override string Tooltip => $"{count} <style=blind>Blind applied</style>";
 }
 
 public class Overwhammer : TodoTracker {
@@ -736,10 +736,9 @@ public class AncientMeteorite : SimpleCounter {
 	public override string Tooltip => $"{count} explosive force{Utils.Plural(count)}";
 }
 
-public class DumbBell : SimpleCounter {
+public class DumbBell : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.STR_ON_RELOAD;
-	public override int Step => 2;
-	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Strength;
 }
 
 public class TheCake : NoopTracker {
@@ -769,15 +768,14 @@ public class IntentionalOboe : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
 
-public class SpiralSlayer : SimpleCounter {
+public class SpiralSlayer : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.START_WITH_STR;
-	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Strength;
 }
 
-public class ShrewdScales : SimpleCounter {
+public class ShrewdScales : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BAL_ON_RELOAD;
-	public override int Step => 2;
-	public override string Tooltip => $"{count} <style=balance>Ballance added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Balance;
 }
 
 public class ConsumingChalice : OrbDamageCounter {
@@ -834,7 +832,6 @@ public class AncientFleece : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ANCIENT_FLEECE;
 }
 
-[HarmonyPatch]
 public class RefresherCourse : Tracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_BUFF;
 	private int musCount = 0, spinCount = 0;
@@ -846,17 +843,14 @@ public class RefresherCourse : Tracker {
 	public override void Used() {
 		_active = true;
 	}
-	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStatusEffect")]
-	[HarmonyPrefix]
-	private static void ApplyStatusEffect(Battle.StatusEffects.StatusEffect statusEffect) {
-		RefresherCourse t = (RefresherCourse)Tracker.trackers[Relics.RelicEffect.REFRESH_BUFF];
-		if (!t._active)
+	public void ApplyStatusEffect(Battle.StatusEffects.StatusEffect statusEffect) {
+		if (!_active)
 			return;
 		if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Strength)
-			t.musCount += statusEffect.Intensity;
+			musCount += statusEffect.Intensity;
 		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Finesse)
-			t.spinCount += statusEffect.Intensity;
-		t._active = false;
+			spinCount += statusEffect.Intensity;
+		_active = false;
 	}
 	public override object State {
 		get => (musCount, spinCount);
@@ -1107,10 +1101,9 @@ public class ArmourOnPegs : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ARMOUR_ON_PEGS_HIT;
 }
 
-public class StartWithBallwark : SimpleCounter {
+public class StartWithBallwark : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.START_WITH_BALLWARK;
-	public override int Step => 6;
-	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
 [HarmonyPatch]
@@ -1177,16 +1170,14 @@ public class KnightCap : SimpleCounter {
 	public override string Tooltip => $"{count} max HP added";
 }
 
-public class BallpeenHammer : SimpleCounter {
+public class BallpeenHammer : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_BALLWARK_WHEN_SHIELD_PEG_CREATED;
-	public override int Step => 4;
-	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
-public class FieryFurnace : SimpleCounter {
+public class FieryFurnace : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_BALLWARK_WHEN_SHIELD_PEG_BROKEN;
-	public override int Step => 4;
-	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
 public class TrainingWeight : SimpleCounter {
@@ -1194,9 +1185,9 @@ public class TrainingWeight : SimpleCounter {
 	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
 }
 
-public class BrassicaceaeKnuckles : SimpleCounter {
+public class BrassicaceaeKnuckles : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.STRENGTH_ON_REFRESH;
-	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Strength;
 }
 
 [HarmonyPatch]
@@ -1468,10 +1459,9 @@ public class LeafTheRestForLater : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ONLY_REFRESH_X_PEGS;
 }
 
-public class VitaminC : SimpleCounter {
+public class VitaminC : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_ON_CRIT;
-	public override int Step => Relics.RelicManager.BALLUSION_ON_CRIT_AMOUNT;
-	public override string Tooltip => $"{count} <style=dodge>Ballusion added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
 public class IOU : NoopTracker {
@@ -1491,10 +1481,9 @@ public class ReduceReFuseRecycle : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";
 }
 
-public class BallwarkToMuscircle : SimpleCounter {
+public class BallwarkToMuscircle : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLWARK_TO_MUSCIRCLE;
-	public override int Step => Tracker.HaveRelic(Relics.RelicEffect.STRENGTH_PLUS_ONE) ? 2 : 1;
-	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Strength;
 }
 
 public class BeleagueredBoots : NoopTracker {
@@ -1508,100 +1497,145 @@ public class DoubleBallusion : NoopTracker {
 	// Luckily, it doesn't actually exist
 }
 
-public class DodgyDagger : SimpleCounter {
+public class DodgyDagger : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPINESSE_WHEN_DODGING;
-	public override string Tooltip => $"{count} <style=finesse>Spinesse added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Finesse;
 }
 
 public class StackedOrbacus : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.START_WITH_EXPLOITABALL;
 }
 
-public class FastReakaton : SimpleCounter {
+public class FastReakaton : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_BALLUSION_WITH_SPAWNS;
-	public override int Step => Relics.RelicManager.BALLUSION_GAIN_ON_ADDITIONAL_SPAWN;
-	public override string Tooltip => $"{count} <style=dodge>Ballusion added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class PieceOfMind : SimpleCounter {
+public class PieceOfMind : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOSE_BALLWARK_GAIN_BALLANCE;
-	public override string Tooltip => $"{count} <style=balance>Ballance added</style>";
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Balance;
 }
 
-public class DistractionReaction : TodoTracker {
+public class DistractionReaction : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAIN_BALLUSION_FROM_ENEMY_DMG;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class Redoublet : TodoTracker {
+public class Redoublet : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DODGE_CREATE_CRIT;
 }
 
-public class ConstrictingChains : TodoTracker {
+public class ConstrictingChains : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.AIM_LIMITER_MULTIBALL;
 }
 
 public class EndlessDevouRing : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_DEBUFF;
+	// TODO: Tracking of relics that buff/debuff pegs
 }
 
-public class BastionReaction : TodoTracker {
+[HarmonyPatch]
+public class BastionReaction : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOSE_HP_GAIN_BALLWARK;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
-public class IsDisYourCard : TodoTracker {
+public class IsDisYourCard : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DISCARD_GAIN_CRIT_BALLUSION;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class RefreshPerspective : TodoTracker {
+public class RefreshPerspective : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_UPGRADES_PEGS;
 }
 
-public class Mauliflower : TodoTracker {
+public class Mauliflower : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRITS_FOR_SPINESSE;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Finesse;
 }
 
-public class ModestMallet : TodoTracker {
+public class ModestMallet : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DISCARD_TO_UPGRADE;
+	public override string Tooltip => $"{count} orb{Utils.Plural(count)} upgraded";
 }
 
-public class MasHPEachFloor : TodoTracker {
+public class MaxHPEachFloor : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_MAX_HP_EACH_FLOOR;
+	public override string Tooltip => $"{count} max HP added";
 }
 
 public class OldAliensrock : AliensRock {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL;
 }
 
-public class HaglinsHat : TodoTracker {
+[HarmonyPatch]
+public class HaglinsHat : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.COINS_PROVIDE_HEALING;
+	[HarmonyPatch(typeof(Relics.RelicManager), "CoinsProvideHealingRelicCallback")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		HaglinsHat t = (HaglinsHat)Tracker.trackers[Relics.RelicEffect.COINS_PROVIDE_HEALING];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Relics.RelicManager), "CoinsProvideHealingRelicCallback")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		HaglinsHat t = (HaglinsHat)Tracker.trackers[Relics.RelicEffect.COINS_PROVIDE_HEALING];
+		t._active = false;
+	}
 }
 
-public class FlauntyGauntlets : TodoTracker {
+public class FlauntyGauntlets : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.COINS_PROVIDE_BALLUSION;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class SteadyScope : TodoTracker {
+public class SteadyScope : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_GUARANTEED_CRIT;
+	public override string Tooltip => $"{count} crit{Utils.Plural(count)}";
 }
 
-public class SpiffyCrit : TodoTracker {
+[HarmonyPatch]
+public class SpiffyCrit : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ATTACKS_APPLY_EXPLOITABALL;
+	private bool _active = false;
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Battle.Attacks.Attack), "GetStatusEffects")]
+	[HarmonyPostfix]
+	private static void GetStatus(List<Battle.StatusEffects.StatusEffect> __result) {
+		SpiffyCrit t = (SpiffyCrit)Tracker.trackers[Relics.RelicEffect.ATTACKS_APPLY_EXPLOITABALL];
+		if (!t._active)
+			return;
+		foreach (var e in __result) {
+			if (e.EffectType == Battle.StatusEffects.StatusEffectType.Exploitaball) {
+				t.count += e.Intensity;
+			}
+		}
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} <style=exploitaball>Exploitaball applied</style>";
 }
 
-public class SubtractionReaction : TodoTracker {
+public class SubtractionReaction : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_CREATES_DAMAGE_REDUCTION_SLIME;
 }
 
-public class CounterfeitCrits : TodoTracker {
+public class CounterfeitCrits : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HITTING_CRIT_ADDS_TEMP_CRITS;
 }
 
-public class ClearTheWay : TodoTracker {
+public class ClearTheWay : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ATTACKS_APPLY_TRANSPHERENCY;
+	public override int Step => Relics.RelicManager.ATTACKS_APPLY_TRANSPHERENCY_AMOUNT;
+	public override void Checked() { Used(); }
+	public override string Tooltip => $"{count} <style=transpherency>Transpherency applied</style>";
 }
 
-public class Balladroit : TodoTracker {
+public class Balladroit : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.START_WITH_BALLWARK_FOR_ORBS_IN_DECK;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
 public class TrainingTabard : TodoTracker {

@@ -232,6 +232,20 @@ public abstract class DamageAllCounter : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
+public abstract class StatusEffectCounter : SimpleCounter {
+	public abstract Battle.StatusEffects.StatusEffectType type { get; }
+	protected bool _active = false;
+	public override void Used() {
+		_active = true;
+	}
+	public void ApplyStatusEffect(Battle.StatusEffects.StatusEffect statusEffect) {
+		if (_active && statusEffect.EffectType == type)
+			count += statusEffect.Intensity;
+		_active = false;
+	}
+	public override string Tooltip => $"{count} {Utils.TypeDesc(type)} added</style>";
+}
+
 public class Utils {
 	static public T GetResource<T>() where T : UnityEngine.Object {
 		T[] objs = Resources.FindObjectsOfTypeAll<T>();
@@ -270,6 +284,25 @@ public class Utils {
 		}
 		return enemyCount;
 	}
+
+	static public string TypeDesc(Battle.StatusEffects.StatusEffectType type) => type switch {
+		Battle.StatusEffects.StatusEffectType.Thorned => "<style=bramble>Bramble",
+		Battle.StatusEffects.StatusEffectType.Stunned => "<style=stunned>Stunned",
+		Battle.StatusEffects.StatusEffectType.Blind => "<style=blind>Blind",
+		Battle.StatusEffects.StatusEffectType.Confusion => "<style=confuse>Confused",
+		Battle.StatusEffects.StatusEffectType.Reflect => "<style=damage>Reflect",
+		Battle.StatusEffects.StatusEffectType.Strength => "<style=strength>Muscircle",
+		Battle.StatusEffects.StatusEffectType.Finesse => "<style=finesse>Spinesse",
+		Battle.StatusEffects.StatusEffectType.Balance => "<style=balance>Ballance",
+		Battle.StatusEffects.StatusEffectType.Dexterity => "<style=dexterity>Dexspherity",
+		Battle.StatusEffects.StatusEffectType.Ballwark => "<style=shield>Ballwark",
+		Battle.StatusEffects.StatusEffectType.Poison => "<style=poison>Spinfection",
+		Battle.StatusEffects.StatusEffectType.Ballusion => "<style=dodge>Ballusion",
+		Battle.StatusEffects.StatusEffectType.Intangiball => "<style=dmg_limit>Intangiball",
+		Battle.StatusEffects.StatusEffectType.Exploitaball => "<style=exploitaball>Exploitaball",
+		Battle.StatusEffects.StatusEffectType.Transpherency => "<style=transpherency>Transpherency",
+		_ => null,
+	};
 }
 
 public class Refl<TFld> {

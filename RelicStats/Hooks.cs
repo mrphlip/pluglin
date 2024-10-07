@@ -37,7 +37,6 @@ public class Hooks {
 			}
 		}
 	}
-	// todo: AttemptUseCountdownRelicManyTimes for COINS_PROVIDE_HEALING
 
 	[HarmonyPatch(typeof(Relics.RelicManager), "RelicEffectActive")]
 	[HarmonyPostfix]
@@ -167,6 +166,17 @@ public class Hooks {
 			if (ingot != null)
 				ingot.Damage(damage);
 		}
+	}
+
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStatusEffect")]
+	[HarmonyPrefix]
+	private static void ApplyStatusEffect(Battle.StatusEffects.StatusEffect statusEffect) {
+		foreach (Tracker tracker in Tracker.trackers.Values) {
+			if (tracker is StatusEffectCounter stattracker)
+				stattracker.ApplyStatusEffect(statusEffect);
+		}
+		RefresherCourse t = (RefresherCourse)Tracker.trackers[Relics.RelicEffect.REFRESH_BUFF];
+		t.ApplyStatusEffect(statusEffect);
 	}
 }
 
