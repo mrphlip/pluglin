@@ -1638,52 +1638,91 @@ public class Balladroit : StatusEffectCounter {
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
-public class TrainingTabard : TodoTracker {
+public class TrainingTabard : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAINING_BALLWARK_GIVES_MUSCIRCLE;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Strength;
 }
 
-public class AddedAdvantarge : TodoTracker {
+public class AddedAdvantarge : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAINING_MUSCIRCLE_GIVES_BALLWARK;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
-public class ShieldBasher : TodoTracker {
+public class ShieldBasher : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SHIELD_PEGS_ADD_DAMAGE;
 }
 
-public class MinibossMeetup : TodoTracker {
+public class MinibossMeetup : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ONLY_MINIBOSSES;
 }
 
-public class Spinsepsion : TodoTracker {
+public class Spinsepsion : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPINFECTION_INC_OVER_TIME;
+	public override string Tooltip => $"{count} <style=poison>Spinfection increased</style>";
 }
 
-public class DebuffDistractor : TodoTracker {
+public class DebuffDistractor : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.STATUS_EFFECTS_ADD_DODGE;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class TornSash : TodoTracker {
+public class TornSash : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HALVE_INCOMING_DAMAGE;
+	public override void Used() {}
+	public void DamageAvoided(float damage) {
+		count += (int)Mathf.Ceil(damage);
+	}
+	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
 
-public class CallOfTheVoid : TodoTracker {
+[HarmonyPatch]
+public class CallOfTheVoid : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_DELETE_PEGS;
+	public override void Used() {}
+	[HarmonyPatch(typeof(Peg), "DestroyPeg")]
+	[HarmonyPrefix]
+	private static void DestroyPeg() {
+		if (Tracker.HaveRelic(Relics.RelicEffect.ALL_ORBS_DELETE_PEGS)) {
+			CallOfTheVoid t = (CallOfTheVoid)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_DELETE_PEGS];
+			t.count++;
+		}
+	}
+	public override string Tooltip => $"{count} <sprite name=\"PEG\"> destroyed";
 }
 
-public class ReverseProjectile : TodoTracker {
+public class ReverseProjectile : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REVERSE_PROJECTILE_ATTACK;
 }
 
-public class BombToDull : TodoTracker {
+public class BombToDull : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOMB_TO_DULL;
+	public override void Checked() => Used();
+	public override string Tooltip => $"{count} <sprite name=\"BOMB\"> dulled";
 }
 
-public class CrystalCatalyst : TodoTracker {
+public class CrystalCatalyst : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MORE_SPINFECTION_DAMAGE_PER_ACT;
+	public override void Checked() => Used();
+	public override int Step => 5 * Map.MapController.instance.Act;
+	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
-public class SproutingSpinvestment : TodoTracker {
+[HarmonyPatch]
+public class SproutingSpinvestment : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAIN_PERCENTAGE_OF_GOLD_EACH_EVENT;
+	private bool _active = false;
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Currency.CurrencyManager), "AddGold")]
+	[HarmonyPrefix]
+	private static void AddGold(int amount) {
+		SproutingSpinvestment t = (SproutingSpinvestment)Tracker.trackers[Relics.RelicEffect.GAIN_PERCENTAGE_OF_GOLD_EACH_EVENT];
+		if (t._active)
+			t.count += amount;
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";
 }
 
 [HarmonyPatch]
@@ -1700,6 +1739,6 @@ public class EffectiveCriticism : Roundreloquence {
 	}
 }
 
-public class HeavyHand : TodoTracker {
+public class HeavyHand : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ORBS_MULTIHIT_BUT_LESS_AIM;
 }

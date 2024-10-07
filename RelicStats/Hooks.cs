@@ -202,6 +202,10 @@ public class Transpilers {
 		return null;
 	}
 
+	public static bool IsLoad(CodeInstruction op) {
+		return IsLoadArg(op) != null || IsLoadLoc(op) != null;
+	}
+
 	public static int? IsStoreArg(CodeInstruction op) {
 		if (op.opcode == OpCodes.Starg) return (int?)op.operand;
 		if (op.opcode == OpCodes.Starg_S) return (int?)(byte?)op.operand;
@@ -313,6 +317,7 @@ public class Transpilers {
 		bool foundRoundGuard = false;
 		bool foundPuppet = false;
 		bool foundSash = false;
+		bool foundTornSash = false;
 		bool foundCounter = false;
 
 		for (int i = 0; i < code.Count; i++) {
@@ -385,6 +390,26 @@ public class Transpilers {
 				continue;
 			}
 
+			// Torn Sash
+			if (
+				IsLoadArg(code[i]) == 0 &&
+				IsLoadField(code[i+1])?.Name == "_relicManager" &&
+				IsLoadConstInt(code[i+2]) == (int)Relics.RelicEffect.HALVE_INCOMING_DAMAGE &&
+				IsCallMethod(code[i+3])?.Name == "AttemptUseRelic" &&
+				IsBranchFalse(code[i+4]) &&
+				IsLoad(code[i+5]) &&
+				IsLoadConstFloat(code[i+6]) == 2f &&
+				code[i+7].opcode == OpCodes.Div
+			) {
+				CodeInstruction op1 = new CodeInstruction(OpCodes.Dup, null);
+				CodeInstruction op2 = MakeCall(typeof(Transpilers).GetMethod("HalveDamage"));
+				code.Insert(i+8, op2);
+				code.Insert(i+8, op1);
+				i+=8;
+				foundTornSash = true;
+				continue;
+			}
+
 			// Ripostal Service
 			if (
 				IsLoadArg(code[i]) == 0 &&
@@ -420,6 +445,10 @@ public class Transpilers {
 			Plugin.Logger.LogError("Couldn't find Sash of Focus code in PlayerHealthController.Damage");
 			return null;
 		}
+		if (!foundTornSash) {
+			Plugin.Logger.LogError("Couldn't find Torn Sash code in PlayerHealthController.Damage");
+			return null;
+		}
 		if (!foundCounter) {
 			Plugin.Logger.LogError("Couldn't find Ripostal Service code in PlayerHealthController.Damage");
 			return null;
@@ -446,6 +475,10 @@ public class Transpilers {
 
 	public static void PreventLethalDamage(float amount) {
 		((SashOfFocus)Tracker.trackers[Relics.RelicEffect.PREVENT_LETHAL_DAMAGE]).DamageAvoided(amount);
+	}
+
+	public static void HalveDamage(float amount) {
+		((TornSash)Tracker.trackers[Relics.RelicEffect.HALVE_INCOMING_DAMAGE]).DamageAvoided(amount);
 	}
 
 	public static void BallwarkCounter(float amount) {
