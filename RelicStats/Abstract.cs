@@ -165,7 +165,7 @@ public abstract class OrbDamageCounter : DamageCounter {
 	public override void Used() {}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
 		Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
-		var owned = Utils.GetAttr<Relics.RelicManager, Dictionary<Relics.RelicEffect, Relics.Relic>>(relicManager, "_ownedRelics");
+		var owned = Refl<Dictionary<Relics.RelicEffect, Relics.Relic>>.GetAttr(relicManager, "_ownedRelics");
 		Relics.Relic r = owned[Relic];
 		owned.Remove(Relic);
 		float baseDamage = attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
@@ -246,6 +246,11 @@ public class Utils {
 		return (TFld)fld.GetValue(obj);
 	}
 
+	static public void SetAttr<TObj, TFld>(TObj obj, string field, TFld val) {
+		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
+		fld.SetValue(obj, val);
+	}
+
 	static public TFld GetStaticAttr<TObj, TFld>(string field) {
 		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Static);
 		return (TFld)fld.GetValue(null);
@@ -264,5 +269,19 @@ public class Utils {
 			}
 		}
 		return enemyCount;
+	}
+}
+
+public class Refl<TFld> {
+	static public TFld GetAttr<TObj>(TObj obj, string field) {
+		return Utils.GetAttr<TObj, TFld>(obj, field);
+	}
+
+	static public void SetAttr<TObj>(TObj obj, string field, TFld val) {
+		Utils.SetAttr<TObj, TFld>(obj, field, val);
+	}
+
+	static public TFld GetStaticAttr<TObj>(string field) {
+		return Utils.GetStaticAttr<TObj, TFld>(field);
 	}
 }

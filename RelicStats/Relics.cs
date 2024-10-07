@@ -1,6 +1,7 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace RelicStats;
@@ -662,7 +663,7 @@ public class EyeOfTurtle : SimpleCounter {
 
 public class GloriousSuffeRing : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_BUFF;
-	// TODO: Should this also try to count the debuffs on pegs as "damage lost"?
+	// TODO: Tracking of relics that buff/debuff pegs
 }
 
 public class SapperSack : NoopTracker {
@@ -929,7 +930,18 @@ public class MoltenMantle : DamageTargetedCounter {
 public class Navigationflation : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASED_NAV_GOLD;
 	private bool doingBomb = false;
-	public override int Step => doingBomb ? 15 : 3;
+	public override int Step { get {
+		if (Tracker.HaveRelic(Relics.RelicEffect.CONVERT_COIN_TO_DAMAGE))
+			return 0;
+		if (doingBomb) {
+			if (Tracker.HaveRelic(Relics.RelicEffect.BOMB_NAV_GOLD))
+				return 15;
+			else
+				return 0;
+		} else {
+			return 3;
+		}
+	}}
 	[HarmonyPatch(typeof(Bomb), "PegActivated")]
 	[HarmonyPrefix]
 	private static void StartBomb() {
@@ -1038,10 +1050,14 @@ public class PerfectForger : SimpleCounter {
 }
 
 [HarmonyPatch]
-public class BranchOfEmber : TodoTracker {
+public class BranchOfEmber : Tracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BLIND_BRAMBLE_COMBO;
 	private bool _active = false;
 	private int blindCount = 0, brambleCount = 0;
+	public override void Reset() {
+		_active = false;
+		blindCount = brambleCount = 0;
+	}
 	public override void Used() {
 		_active = true;
 	}
@@ -1063,6 +1079,12 @@ public class BranchOfEmber : TodoTracker {
 			t.brambleCount += statusEffect.Intensity;
 		t._active = false;
 	}
+	public override object State {
+		get => (blindCount, brambleCount);
+		set {
+			(blindCount, brambleCount) = ((int, int))value;
+		}
+	}
 	public override string Tooltip => $"{blindCount} <style=blind>Blind applied</style>; {brambleCount} <style=bramble>Bramble applied</style>";
 }
 
@@ -1075,144 +1097,435 @@ public class RipostalService : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
-public class EssentialOil : TodoTracker {
+public class EssentialOil : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ARMOUR_PLUS_ONE;
+	public override int Step => 2;
+	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
 }
 
-public class ArmourOnPegs : TodoTracker {
+public class ArmourOnPegs : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ARMOUR_ON_PEGS_HIT;
 }
 
-public class StartWithBallwark : TodoTracker {
+public class StartWithBallwark : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.START_WITH_BALLWARK;
+	public override int Step => 6;
+	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
 }
 
-public class OrbertsStory : TodoTracker {
+[HarmonyPatch]
+public class OrbertsStory : Tracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MORE_TREASURE_NODES;
+	private int treasureCount = 0, rareCount = 0;
+	public override void Reset() { treasureCount = rareCount = 0; }
+	public override void Used() {}
+	[HarmonyPatch(typeof(Map.MapController), "GetRandomScenario")]
+	[HarmonyPrefix]
+	private static void GetScenario(Map.SeededUnknownNodeData seededUnknownNodeData) {
+		if (!Tracker.HaveRelic(Relics.RelicEffect.MORE_TREASURE_NODES))
+			return;
+		if (seededUnknownNodeData.typeRoll >= 0.05f && seededUnknownNodeData.typeRoll < 0.12f) {
+			OrbertsStory t = (OrbertsStory)Tracker.trackers[Relics.RelicEffect.MORE_TREASURE_NODES];
+			t.treasureCount++;
+		}
+	}
+	[HarmonyPatch(typeof(Scenarios.ChestScenarioController), "OpenChest")]
+	[HarmonyPrefix]
+	private static void OpenChest(Scenarios.ChestScenarioController __instance) {
+		if (!Tracker.HaveRelic(Relics.RelicEffect.MORE_TREASURE_NODES))
+			return;
+		float rarechance = Relics.RelicManager.CHEST_RARE_CHANCE;
+		if (StaticGameData.dataToLoad is MapDataTreasure mapdata)
+			rarechance = mapdata.rareChance;
+		var nodedata = Refl<Map.SeededTreasureNodeData>.GetAttr(__instance, "_seededTreasureNodeData");
+		if (nodedata != null && nodedata.rareRelicChanceRoll > rarechance && nodedata.rareRelicChanceRoll <= rarechance + 0.07f)
+		{
+			OrbertsStory t = (OrbertsStory)Tracker.trackers[Relics.RelicEffect.MORE_TREASURE_NODES];
+			t.rareCount++;
+		}
+	}
+	public override object State {
+		get => (treasureCount, rareCount);
+		set {
+			(treasureCount, rareCount) = ((int, int))value;
+		}
+	}
+	public override string Tooltip => $"{treasureCount} extra treasure{Utils.Plural(treasureCount)}; {rareCount} extra rare relic{Utils.Plural(rareCount)}";
 }
 
-public class KnightCap : TodoTracker {
+[HarmonyPatch]
+public class KnightCap : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HEAL_WITH_BALLWARK;
+	private bool _active = false;
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetUpPostBattleOptions")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		KnightCap t = (KnightCap)Tracker.trackers[Relics.RelicEffect.HEAL_WITH_BALLWARK];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AdjustMaxHealth")]
+	[HarmonyPrefix]
+	private static void AddMaxHP(float amount) {
+		KnightCap t = (KnightCap)Tracker.trackers[Relics.RelicEffect.HEAL_WITH_BALLWARK];
+		if (t._active)
+			t.count += (int)amount;
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} max HP added";
 }
 
-public class BallpeenHammer : TodoTracker {
+public class BallpeenHammer : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_BALLWARK_WHEN_SHIELD_PEG_CREATED;
+	public override int Step => 4;
+	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
 }
 
-public class FieryFurnace : TodoTracker {
+public class FieryFurnace : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_BALLWARK_WHEN_SHIELD_PEG_BROKEN;
+	public override int Step => 4;
+	public override string Tooltip => $"{count} <style=ballwark>Ballwark added</style>";
 }
 
-public class TrainingWeight : TodoTracker {
+public class TrainingWeight : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.STRENGTH_PLUS_ONE;
+	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
 }
 
-public class BrassicaceaeKnuckles : TodoTracker {
+public class BrassicaceaeKnuckles : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.STRENGTH_ON_REFRESH;
+	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
 }
 
-public class Roundreloquence : TodoTracker {
+[HarmonyPatch]
+public class Roundreloquence : Tracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_HIT;
+	protected bool _active = false;
+	private int brambleCount = 0, poisonCount = 0, blindCount = 0, exploitCount = 0, transpCount = 0;
+	public override void Reset() {
+		_active = false;
+		brambleCount = poisonCount = blindCount = exploitCount = transpCount = 0;
+	}
+	public override void Used() {}
+	[HarmonyPatch(typeof(Battle.Attacks.AttackBehaviours.AddRandomStatusEffectOnHit), "AffectEnemy")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		Roundreloquence t = (Roundreloquence)Tracker.trackers[Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_HIT];
+		t._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.Attacks.AttackBehaviours.AddRandomStatusEffectOnHit), "AffectEnemy")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		Roundreloquence t = (Roundreloquence)Tracker.trackers[Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_HIT];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "ApplyStatusEffect")]
+	[HarmonyPrefix]
+	private static void ApplyStatusHook(Battle.StatusEffects.StatusEffect statusEffect) {
+		Roundreloquence t = (Roundreloquence)Tracker.trackers[Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_HIT];
+		t.ApplyStatus(statusEffect);
+		EffectiveCriticism t2 = (EffectiveCriticism)Tracker.trackers[Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_CRIT];
+		t2.ApplyStatus(statusEffect);
+	}
+	protected void ApplyStatus(Battle.StatusEffects.StatusEffect statusEffect) {
+		if (!_active)
+			return;
+		if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Thorned)
+			brambleCount += statusEffect.Intensity;
+		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Poison)
+			poisonCount += statusEffect.Intensity;
+		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Blind)
+			blindCount += statusEffect.Intensity;
+		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Exploitaball)
+			exploitCount += statusEffect.Intensity;
+		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Transpherency)
+			transpCount += statusEffect.Intensity;
+		else
+			Plugin.Logger.LogWarning($"Unexpected debuff from Roundreloquence: {statusEffect.EffectType}");
+		_active = false;
+	}
+	public override object State {
+		get => (brambleCount, poisonCount, blindCount, exploitCount, transpCount);
+		set {
+			(brambleCount, poisonCount, blindCount, exploitCount, transpCount) = ((int, int, int, int, int))value;
+		}
+	}
+	public override string Tooltip => $"{brambleCount} <style=bramble>Bramble</style>; {poisonCount} <style=poison>Spinfection</style>; {blindCount} <style=blind>Blind</style>; {exploitCount} <style=exploitaball>Exploitaball</style>; {transpCount} <style=transpherency>Transpherency</style>";
 }
 
-public class MaskOfSorrow : TodoTracker {
+public class MaskOfSorrow : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_NEGATIVE_STATUS;
+	public override string Tooltip => $"{count} debuff{Utils.Plural(count)} increased";
 }
 
-public class MaskOfJoy : TodoTracker {
+[HarmonyPatch]
+public class MaskOfJoy : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_POSITIVE_STATUS;
+	private bool _active = true;
+	public override void Used() {
+		if (_active)
+			base.Used();
+	}
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "CheckRelicIntensityEffects")]
+	[HarmonyPrefix]
+	private static void Disable(Battle.StatusEffects.PlayerStatusEffectController __instance, Battle.StatusEffects.StatusEffect statusEffect) {
+		// incorrect ordering of conditions here makes Used() get called incorrectly
+		Battle.StatusEffects.StatusEffectType[] positives = Refl<Battle.StatusEffects.StatusEffectType[]>.GetAttr(__instance, "_positiveStatusEffects");
+		if (!Enumerable.Contains(positives, statusEffect.EffectType) || statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Ballwark || statusEffect.Intensity <= 0) {
+			MaskOfJoy t = (MaskOfJoy)Tracker.trackers[Relics.RelicEffect.INCREASE_POSITIVE_STATUS];
+			t._active = false;
+		}
+	}
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "CheckRelicIntensityEffects")]
+	[HarmonyPostfix]
+	private static void Enable() {
+		MaskOfJoy t = (MaskOfJoy)Tracker.trackers[Relics.RelicEffect.INCREASE_POSITIVE_STATUS];
+		t._active = true;
+	}
+	public override string Tooltip => $"{count} buff{Utils.Plural(count)} increased";
 }
 
-public class GrubbyGloves : TodoTracker {
+public class GrubbyGloves : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ATTACKS_DEAL_POISON;
+	public override string Tooltip => $"{count} <style=poison>Spinfection applied</style>";
 }
 
-public class ChokeMod : TodoTracker {
+public class ChokeMod : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOMBS_APPLY_POISON;
+	public override string Tooltip => $"{count} <style=poison>Spinfection applied</style>";
 }
 
 public class AuAuger : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRITS_PROVIDE_PIERCE;
+	// TODO: the relics that affect projectiles are going to be a pain
 }
 
-public class BeckoningCrit : TodoTracker {
+public class BeckoningCrit : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.COINS_TO_CRITS;
+	public override string Tooltip => $"{count} crit{Utils.Plural(count)}";
 }
 
 public class AGoodSlime : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SLIME_BUFFS_PEGS;
+	// TODO: Tracking of relics that buff/debuff pegs
 }
 
 public class Adventurine : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BUFF_FIRST_PEG_HIT;
+	// TODO: Tracking of relics that buff/debuff pegs
 }
 
-public class AliensRock : TodoTracker {
+[HarmonyPatch]
+public class AliensRock : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS;
+	private static bool _active = false;
+	private static Battle.Enemies.Enemy _lastEnemy;
+	private static int _lastRange;
+	private static Battle.Attacks.AoeAttack.AoeType _lastType;
+	private static EnemyManager.SlotType _lastSlot;
+	private static Battle.Enemies.Enemy[] _lastResult;
+	public override void Reset() {
+		base.Reset();
+		ResetTemps();
+	}
+	private static void ResetTemps() {
+		_active = false;
+		_lastEnemy = null;
+		_lastResult = null;
+	}
+	public override void Used() {}
+	[HarmonyPatch(typeof(EnemyManager), "GetSplashRangeEnemies")]
+	[HarmonyPostfix]
+	private static void GetEnemies(Battle.Enemies.Enemy enemy, int range, Battle.Attacks.AoeAttack.AoeType aoeType, EnemyManager.SlotType slotType, Battle.Enemies.Enemy[] __result) {
+		if (_active) {
+			_lastEnemy = enemy;
+			_lastRange = range;
+			_lastType = aoeType;
+			_lastSlot = slotType;
+			_lastResult = __result;
+		}
+	}
+	[HarmonyPatch(typeof(TargetedAttack), "HandleSpellHit")]
+	[HarmonyPrefix]
+	private static void EnableTarget() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(TargetedAttack), "HandleSpellHit")]
+	[HarmonyPostfix]
+	private static void ProcessTarget(TargetedAttack __instance) {
+		_active = false;
+		EnemyManager enemyManager = Refl<Battle.Attacks.AttackManager>.GetAttr(__instance, "_attackManager").enemyManager;
+		float hitDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+		if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL) || Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
+			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastEnemy, 0, _lastType, _lastSlot);
+			if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL))
+				((OldAliensrock)Tracker.trackers[Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL]).Handle(_lastResult, notSplash, hitDamage);
+			else
+				((AliensRock)Tracker.trackers[Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS]).Handle(_lastResult, notSplash, hitDamage);
+		}
+		ResetTemps();
+	}
+	[HarmonyPatch(typeof(Battle.Attacks.AoeAttack), "HandleSpellHit")]
+	[HarmonyPrefix]
+	private static void EnableAoe() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Battle.Attacks.AoeAttack), "HandleSpellHit")]
+	[HarmonyPostfix]
+	private static void ProcessAoe(Battle.Attacks.AoeAttack __instance) {
+		_active = false;
+		EnemyManager enemyManager = Refl<Battle.Attacks.AttackManager>.GetAttr(__instance, "_attackManager").enemyManager;
+		float hitDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+		if (Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
+			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastEnemy, _lastRange - 1, _lastType, _lastSlot);
+			((AliensRock)Tracker.trackers[Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS]).Handle(_lastResult, notSplash, hitDamage);
+		}
+		ResetTemps();
+	}
+	private void Handle(Battle.Enemies.Enemy[] enemiesHit, Battle.Enemies.Enemy[] enemiesIgnore, float damage) {
+		int enemyCount = 0;
+		foreach (var enemy in enemiesHit)
+			if (enemy != null && !Enumerable.Contains(enemiesIgnore, enemy))
+				enemyCount++;
+		count += enemyCount * (int)damage;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
-public class Spinventoriginality : TodoTracker {
+public class Spinventoriginality : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.UNIQUE_ORBS_BUFF;
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		bool oldApplyUniqueBuff = Refl<bool>.GetAttr(attack, "applyUniqueBuff");
+		Utils.SetAttr(attack, "applyUniqueBuff", false);
+		float res = base.GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+		Utils.SetAttr(attack, "applyUniqueBuff", oldApplyUniqueBuff);
+		return res;
+	}
 }
 
-public class SpheridaesFate : TodoTracker {
+[HarmonyPatch]
+public class SpheridaesFate : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CREATE_SQUIRRELS_ON_PEGS_HIT;
+	public override void Used() {}
+	[HarmonyPatch(typeof(RegularPeg), "DoPegCollision")]
+	[HarmonyPrefix]
+	private static void Enable(PachinkoBall pachinko) {
+		if (pachinko.name.Contains("Squirrelball")) {
+			SpheridaesFate t = (SpheridaesFate)Tracker.trackers[Relics.RelicEffect.CREATE_SQUIRRELS_ON_PEGS_HIT];
+			t._active = true;
+		}
+	}
+	[HarmonyPatch(typeof(RegularPeg), "DoPegCollision")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		SpheridaesFate t = (SpheridaesFate)Tracker.trackers[Relics.RelicEffect.CREATE_SQUIRRELS_ON_PEGS_HIT];
+		t._active = false;
+	}
+
+	[HarmonyPatch(typeof(LongPeg), "DoPegCollision")]
+	[HarmonyPrefix]
+	private static void EnableLong(PachinkoBall pachinko) { Enable(pachinko); }
+	[HarmonyPatch(typeof(LongPeg), "DoPegCollision")]
+	[HarmonyPostfix]
+	private static void DisableLong() { Disable(); }
+	[HarmonyPatch(typeof(IndestructiblePeg), "DoPegCollision")]
+	[HarmonyPrefix]
+	private static void EnableIndestructible(PachinkoBall pachinko) { Enable(pachinko); }
+	[HarmonyPatch(typeof(IndestructiblePeg), "DoPegCollision")]
+	[HarmonyPostfix]
+	private static void DisableIndestructible() { Disable(); }
+	[HarmonyPatch(typeof(SlimeOnlyPeg), "DoPegCollision")]
+	[HarmonyPrefix]
+	private static void EnableSlimeOnly(PachinkoBall pachinko) { Enable(pachinko); }
+	[HarmonyPatch(typeof(SlimeOnlyPeg), "DoPegCollision")]
+	[HarmonyPostfix]
+	private static void DisableSlimeOnly() { Disable(); }
+	[HarmonyPatch(typeof(Battle.BouncerPeg), "DoPegCollision")]
+	[HarmonyPrefix]
+	private static void EnableBouncer(PachinkoBall pachinko) { Enable(pachinko); }
+	[HarmonyPatch(typeof(Battle.BouncerPeg), "DoPegCollision")]
+	[HarmonyPostfix]
+	private static void DisableBouncer() { Disable(); }
 }
 
-public class DuplicationStation : TodoTracker {
+public class DuplicationStation : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MULTIBALL_EVERY_X_SHOTS;
+	public override string Tooltip => $"{count} orb{Utils.Plural(count)} duplicated";
 }
 
-public class PrimeSlime : TodoTracker {
+public class PrimeSlime : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_SLIME_ON_PEGS_HIT;
+	public override string Tooltip => $"{count} <sprite name=\"PEG\"> slimed";
 }
 
-public class HouseOfSlime : TodoTracker {
+public class HouseOfSlime : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOUNCY_WALLS_AND_BOUNCERS;
 }
 
-public class LeafTheRestForLater : TodoTracker {
+public class LeafTheRestForLater : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ONLY_REFRESH_X_PEGS;
 }
 
-public class VitaminC : TodoTracker {
+public class VitaminC : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_ON_CRIT;
+	public override int Step => Relics.RelicManager.BALLUSION_ON_CRIT_AMOUNT;
+	public override string Tooltip => $"{count} <style=dodge>Ballusion added</style>";
 }
 
-public class IOU : TodoTracker {
+public class IOU : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAMBLIN_IOU;
 }
 
-public class ReduceReFuseRecycle : TodoTracker {
+public class ReduceReFuseRecycle : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOMB_NAV_GOLD;
+	public override int Step { get {
+		if (Tracker.HaveRelic(Relics.RelicEffect.CONVERT_COIN_TO_DAMAGE))
+			return 0;
+		if (Tracker.HaveRelic(Relics.RelicEffect.INCREASED_NAV_GOLD))
+			return 20;
+		else
+			return 5;
+	}}
+	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";
 }
 
-public class BallwarkToMuscircle : TodoTracker {
+public class BallwarkToMuscircle : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLWARK_TO_MUSCIRCLE;
+	public override int Step => Tracker.HaveRelic(Relics.RelicEffect.STRENGTH_PLUS_ONE) ? 2 : 1;
+	public override string Tooltip => $"{count} <style=strength>Muscircle added</style>";
 }
 
-public class BeleagueredBoots : TodoTracker {
+public class BeleagueredBoots : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_MAX;
 }
 
-public class DoubleBallusion : TodoTracker {
+public class DoubleBallusion : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_GAIN;
+	// Not entirely sure what this one is supposed to do?
+	// Seems to double ballusion gained, but also you lose all ballusion on dodge instead of half
+	// Luckily, it doesn't actually exist
 }
 
-public class DodgyDagger : TodoTracker {
+public class DodgyDagger : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPINESSE_WHEN_DODGING;
+	public override string Tooltip => $"{count} <style=finesse>Spinesse added</style>";
 }
 
-public class StackedOrbacus : TodoTracker {
+public class StackedOrbacus : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.START_WITH_EXPLOITABALL;
 }
 
-public class FastReakaton : TodoTracker {
+public class FastReakaton : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_BALLUSION_WITH_SPAWNS;
+	public override int Step => Relics.RelicManager.BALLUSION_GAIN_ON_ADDITIONAL_SPAWN;
+	public override string Tooltip => $"{count} <style=dodge>Ballusion added</style>";
 }
 
-public class PieceOfMind : TodoTracker {
+public class PieceOfMind : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOSE_BALLWARK_GAIN_BALLANCE;
+	public override string Tooltip => $"{count} <style=balance>Ballance added</style>";
 }
 
 public class DistractionReaction : TodoTracker {
@@ -1255,7 +1568,7 @@ public class MasHPEachFloor : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_MAX_HP_EACH_FLOOR;
 }
 
-public class Aliensrock : TodoTracker {
+public class OldAliensrock : AliensRock {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL;
 }
 
@@ -1339,8 +1652,18 @@ public class SproutingSpinvestment : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAIN_PERCENTAGE_OF_GOLD_EACH_EVENT;
 }
 
-public class EffectiveCriticism : TodoTracker {
+[HarmonyPatch]
+public class EffectiveCriticism : Roundreloquence {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_CRIT;
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Battle.TargetingManager), "OnCritActivated")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		EffectiveCriticism t = (EffectiveCriticism)Tracker.trackers[Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_CRIT];
+		t._active = false;
+	}
 }
 
 public class HeavyHand : TodoTracker {

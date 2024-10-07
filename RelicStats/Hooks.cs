@@ -10,7 +10,7 @@ public class Hooks {
 	[HarmonyPatch(typeof(GameInit), "Start")]
 	[HarmonyPrefix]
 	static private void StartGame(GameInit __instance) {
-		LoadMapData loadData = Utils.GetAttr<GameInit, LoadMapData>(__instance, "LoadData");
+		LoadMapData loadData = Refl<LoadMapData>.GetAttr(__instance, "LoadData");
 		if (loadData.NewGame) {
 			Plugin.Logger.LogInfo("New game, resetting all counters");
 			Tracker.ResetAll();
@@ -82,7 +82,7 @@ public class Hooks {
 	[HarmonyPrefix]
 	private static void AddPegPre(BattleController __instance) {
 		prevDamageAmountCount = __instance.damageAmounts.Count;
-		prevDamageBonus = Utils.GetAttr<BattleController, int>(__instance, "_damageBonus");
+		prevDamageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		foreach (var tracker in Tracker.trackers.Values) {
 			PegDamageCounter dmgtracker = tracker as PegDamageCounter;
 			if (dmgtracker != null)
@@ -95,7 +95,7 @@ public class Hooks {
 		float damageAdded = 0;
 		for (int i = prevDamageAmountCount; i < __instance.damageAmounts.Count; i++)
 			damageAdded += __instance.damageAmounts[i];
-		int damageBonus = Utils.GetAttr<BattleController, int>(__instance, "_damageBonus");
+		int damageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		damageBonus -= prevDamageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
 			PegDamageCounter dmgtracker = tracker as PegDamageCounter;
