@@ -1,6 +1,7 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -27,10 +28,51 @@ public abstract string Tooltip { get; }
 		}
 		ResetAll();
 
+		ValidateTrackers();
+	}
+
+	[Conditional("DEBUG")]
+	public static void ValidateTrackers() {
 		foreach (Relics.RelicEffect i in Enum.GetValues(typeof(Relics.RelicEffect))) {
 			if (!trackers.ContainsKey(i)) {
 				Plugin.Logger.LogWarning($"Missing a tracker for {i}");
 			}
+		}
+
+		foreach (Type t in typeof(Tracker).Assembly.GetTypes()) {
+			if (t.IsSubclassOf(typeof(Tracker))) {
+				bool hasFields = false, hasStateFields = false;
+				foreach (FieldInfo f in t.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) {
+					hasFields = true;
+					if (f.Name[0] != '_')
+						hasStateFields = true;
+				}
+				MethodInfo reset = t.GetMethod("Reset", BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
+				PropertyInfo state = t.GetProperty("State", BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
+				if (hasFields && reset == null)
+					Plugin.Logger.LogWarning($"Tracker class {t} should override Reset method");
+				if (hasStateFields && state == null)
+					Plugin.Logger.LogWarning($"Tracker class {t} should override State property");
+
+				/* TODO: Enable this once I've cleaned up the TODO relics
+				if (t.IsSubclassOf(typeof(TodoTracker)) && !t.IsAbstract) {
+					Plugin.Logger.LogWarning($"Tracker class {t} is still TODO");
+				}
+				*/
+			}
+
+			bool isPatch = t.GetCustomAttributes(typeof(HarmonyPatch), false).Length > 0;
+			bool hasPatch = false;
+			foreach (MethodInfo m in t.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+				if (m.GetCustomAttributes(typeof(HarmonyPatch), false).Length > 0) {
+					hasPatch = true;
+					break;
+				}
+			}
+			if (!isPatch && hasPatch)
+				Plugin.Logger.LogWarning($"Class {t} should have [HarmonyPatch]");
+			else if (isPatch && !hasPatch)
+				Plugin.Logger.LogWarning($"Class {t} should not have [HarmonyPatch]");
 		}
 	}
 	private static void AddTracker(Tracker tracker) {
@@ -62,7 +104,10 @@ public abstract string Tooltip { get; }
 			foreach (var item in data.relicStates) {
 				Tracker tracker;
 				if (trackers.TryGetValue((Relics.RelicEffect)item.Key, out tracker)) {
-					tracker.State = item.Value;
+					try {
+						tracker.State = item.Value;
+					} catch (InvalidCastException) {
+					}
 				}
 			}
 		}
@@ -115,6 +160,10 @@ public abstract class SimpleCounter : Tracker {
 
 public abstract class HealingCounter : SimpleCounter {
 	protected bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {}
 	public virtual void Heal(float amount) {
 		if (_active)
@@ -126,6 +175,10 @@ public abstract class HealingCounter : SimpleCounter {
 
 public abstract class SelfDamageCounter : SimpleCounter {
 	protected bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {}
 	public virtual void SelfDamage(float amount) {
 		if (_active)
@@ -165,16 +218,15 @@ public abstract class DamageCounter : Tracker {
 	}
 	public abstract float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount);
 }
-[HarmonyPatch]
 public abstract class PegDamageCounter : DamageCounter {
 	public virtual int Step => 1;
 	protected bool _active = false;
-	private float peg_count = 0;
-	private int bonus_count = 0;
+	private float _peg_count = 0;
+	private int _bonus_count = 0;
 	public override void Reset() {
 		base.Reset();
 		_active = false;
-		peg_count = bonus_count = 0;
+		_peg_count = _bonus_count = 0;
 	}
 	public override void Used() {
 		_active = true;
@@ -182,20 +234,19 @@ public abstract class PegDamageCounter : DamageCounter {
 	public virtual void StartAddPeg() {}
 	public virtual void AddPeg(float multiplier, int bonus) {
 		if (_active) {
-			peg_count += multiplier;
-			bonus_count += bonus;
+			_peg_count += multiplier;
+			_bonus_count += bonus;
 		}
 		_active = false;
 	}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
 		float[] newDmgValues = new float[dmgValues.Length + 1];
-		newDmgValues = dmgValues.Append(-peg_count).ToArray();
-		float baseDamage = attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus - bonus_count, critCount, false);
-		peg_count = bonus_count = 0;
+		newDmgValues = dmgValues.Append(-_peg_count).ToArray();
+		float baseDamage = attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus - _bonus_count, critCount, false);
+		_peg_count = _bonus_count = 0;
 		return baseDamage;
 	}
 }
-[HarmonyPatch]
 public abstract class OrbDamageCounter : DamageCounter {
 	public override void Used() {}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
@@ -208,25 +259,25 @@ public abstract class OrbDamageCounter : DamageCounter {
 		return baseDamage;
 	}
 }
-[HarmonyPatch]
 public abstract class MultDamageCounter : DamageCounter {
 	protected bool _active = false;
-	protected float multiplier = 1f;
+	protected float _multiplier = 1f;
 	public override void Reset() {
 		base.Reset();
-		multiplier = 1f;
+		_active = false;
+		_multiplier = 1f;
 	}
 	public override void Used() {
 		_active = true;
 	}
 	public virtual void AddDamageMultiplier(float mult) {
 		if (_active)
-			multiplier *= mult;
+			_multiplier *= mult;
 		_active = false;
 	}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
-		dmgMult /= multiplier;
-		multiplier = 1f;
+		dmgMult /= _multiplier;
+		_multiplier = 1f;
 		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
 	}
 }
@@ -254,6 +305,10 @@ public abstract class DamageAllCounter : SimpleCounter {
 	}
 
 	protected bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		_active = true;
 	}
@@ -270,6 +325,10 @@ public abstract class DamageAllCounter : SimpleCounter {
 public abstract class StatusEffectCounter : SimpleCounter {
 	public abstract Battle.StatusEffects.StatusEffectType type { get; }
 	protected bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		_active = true;
 	}

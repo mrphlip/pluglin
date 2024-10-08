@@ -93,6 +93,10 @@ public class GiftThatKeepsGiving : NoopTracker {
 public class RoundGuard : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NO_DAMAGE_ON_RELOAD;
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public void Disable() {
 		_active = false;
 	}
@@ -136,6 +140,10 @@ public class Recombombulator : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOMBS_RESPAWN;
 
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		_active = true;
 	}
@@ -160,6 +168,7 @@ public class ShortFuse : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"BOMB\"> exploded";
 }
 
+[HarmonyPatch]
 public class StrangeBrew : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.POTION_PEGS_COUNT;
 	[HarmonyPatch(typeof(BattleController), "HandlePegActivated")]
@@ -267,6 +276,10 @@ public class SealedConviction : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NO_DISCARD;
 	public override int Step => Relics.RelicManager.SEALED_CONVICTION_BALLANCE;
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		if (_active)
 			count += Step;
@@ -388,11 +401,11 @@ public class OldGardenerGloves : SimpleCounter {
 public class SlimySalve : HealingCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.APPLIES_HEALING_SLIME;
 	private bool _sliming = false;
-	private HashSet<int> slimedPegs = new HashSet<int>();
+	private HashSet<int> _slimedPegs = new HashSet<int>();
 	public override void Reset() {
 		base.Reset();
 		_sliming = false;
-		slimedPegs.Clear();
+		_slimedPegs.Clear();
 	}
 	public override void Used() {
 		_sliming = true;
@@ -417,7 +430,7 @@ public class SlimySalve : HealingCounter {
 		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
 		if (!t._sliming)
 			return;
-		t.slimedPegs.Add(__instance.gameObject.GetInstanceID());
+		t._slimedPegs.Add(__instance.gameObject.GetInstanceID());
 		t._sliming = false;
 	}
 	[HarmonyPatch(typeof(LongPeg), "ApplySlimeToPeg")]
@@ -428,24 +441,24 @@ public class SlimySalve : HealingCounter {
 		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
 		if (!t._sliming)
 			return;
-		t.slimedPegs.Add(__instance.gameObject.GetInstanceID());
+		t._slimedPegs.Add(__instance.gameObject.GetInstanceID());
 		t._sliming = false;
 	}
 	[HarmonyPatch(typeof(Battle.PegManager), "InitializePegs")]
 	[HarmonyPostfix]
 	private static void NewBattle() {
 		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
-		t.slimedPegs.Clear();
+		t._slimedPegs.Clear();
 		t._sliming = false;
 	}
 	[HarmonyPatch(typeof(RegularPeg), "PegActivated")]
 	[HarmonyPrefix]
 	private static void EnableRegular(RegularPeg __instance) {
 		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
-		if (!t.slimedPegs.Contains(__instance.gameObject.GetInstanceID()))
+		if (!t._slimedPegs.Contains(__instance.gameObject.GetInstanceID()))
 			return;
 		if (__instance.slimeType != Peg.SlimeType.HealSlime) {
-			t.slimedPegs.Remove(__instance.gameObject.GetInstanceID());
+			t._slimedPegs.Remove(__instance.gameObject.GetInstanceID());
 			return;
 		}
 		t._active = true;
@@ -460,10 +473,10 @@ public class SlimySalve : HealingCounter {
 	[HarmonyPrefix]
 	private static void EnableLong(LongPeg __instance) {
 		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
-		if (!t.slimedPegs.Contains(__instance.gameObject.GetInstanceID()))
+		if (!t._slimedPegs.Contains(__instance.gameObject.GetInstanceID()))
 			return;
 		if (__instance.slimeType != Peg.SlimeType.HealSlime) {
-			t.slimedPegs.Remove(__instance.gameObject.GetInstanceID());
+			t._slimedPegs.Remove(__instance.gameObject.GetInstanceID());
 			return;
 		}
 		t._active = true;
@@ -503,6 +516,12 @@ public class InfernalIngot : HealingCounter {
 		_damageActive = false;
 	}
 	public override string Tooltip => $"{damageCount} <style=damage>damage dealt</style>; {base.Tooltip}";
+	public override object State {
+		get => (count, damageCount);
+		set {
+			(count, damageCount) = ((int, int))value;
+		}
+	}
 }
 
 [HarmonyPatch]
@@ -544,6 +563,7 @@ public class WeaponizedEnvy : DamageTargetedCounter {
 	}
 }
 
+[HarmonyPatch]
 public class WandOfSkulltimateWrath : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG;
 	public override void StartAddPeg() {
@@ -582,6 +602,12 @@ public class WandOfSkulltimateWrath : PegDamageCounter {
 		_selfDamageActive = false;
 	}
 	public override string Tooltip => $"{base.Tooltip}; {selfDamageCount} <style=damage>self-damage</style>";
+	public override object State {
+		get => (goodCount, badCount, selfDamageCount);
+		set {
+			(goodCount, badCount, selfDamageCount) = ((int, int, int))value;
+		}
+	}
 }
 
 public class RingOfReuse : NoopTracker {
@@ -611,54 +637,60 @@ public class CritsomallosFleece : OrbDamageCounter {
 }
 
 [HarmonyPatch]
-public class EyeOfTurtle : SimpleCounter {
+public class EyeOfTurtle : Tracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS;
-	private bool orbActive = false, relicActive = false;
+	private bool _orbActive = false, _relicActive = false;
 	private int orbCount = 0, relicCount = 0;
 	public override void Reset() {
-		orbActive = relicActive = false;
+		_orbActive = _relicActive = false;
 		orbCount = relicCount = 0;
 	}
 	public override void Used() {
-		if (orbActive)
+		if (_orbActive)
 			orbCount++;
-		if (relicActive)
+		if (_relicActive)
 			relicCount++;
-		orbActive = relicActive = false;
+		_orbActive = _relicActive = false;
 	}
 	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
 	[HarmonyPrefix]
 	private static void EnableOrb() {
 		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
-		t.orbActive = true;
+		t._orbActive = true;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
-		t2.orbActive = true;
+		t2._orbActive = true;
 	}
 	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
 	[HarmonyPostfix]
 	private static void DisableOrb() {
 		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
-		t.orbActive = false;
+		t._orbActive = false;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
-		t2.orbActive = false;
+		t2._orbActive = false;
 	}
 	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
 	[HarmonyPrefix]
 	private static void EnableRelic(bool isTreasure) {
 		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
-		t.relicActive = !isTreasure;
+		t._relicActive = !isTreasure;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
-		t2.relicActive = true;
+		t2._relicActive = true;
 	}
 	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
 	[HarmonyPostfix]
 	private static void DisableRelic() {
 		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
-		t.relicActive = false;
+		t._relicActive = false;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
-		t2.relicActive = false;
+		t2._relicActive = false;
 	}
 	public override string Tooltip => $"{orbCount} extra orb{Utils.Plural(orbCount)}; {relicCount} extra relic{Utils.Plural(relicCount)}";
+	public override object State {
+		get => (orbCount, relicCount);
+		set {
+			(orbCount, relicCount) = ((int, int))value;
+		}
+	}
 }
 
 public class GloriousSuffeRing : TodoTracker {
@@ -816,14 +848,19 @@ public class HaglinsSatchel : NoopTracker {
 
 public class SafetyNet : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MINIMUM_PEGS;
-	private int counter = 0;
+	private int _counter = 0;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+		_counter = 0;
+	}
 	public override void Used() {
 		_active = true;
-		counter = 5;
+		_counter = 5;
 	}
 	public override void AddPeg(float multiplier, int bonus) {
 		base.AddPeg(multiplier, bonus);
-		if (--counter > 0)
+		if (--_counter > 0)
 			_active = true;
 	}
 }
@@ -839,6 +876,7 @@ public class RefresherCourse : Tracker {
 
 	public override void Reset() {
 		musCount = spinCount = 0;
+		_active = false;
 	}
 	public override void Used() {
 		_active = true;
@@ -877,6 +915,10 @@ public class AxeMeAnything : TodoTracker {
 public class SeraphicShield : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.IMMORTAL;
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public void Disable() {
 		_active = false;
 	}
@@ -923,11 +965,15 @@ public class MoltenMantle : DamageTargetedCounter {
 [HarmonyPatch]
 public class Navigationflation : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASED_NAV_GOLD;
-	private bool doingBomb = false;
+	private bool _doingBomb = false;
+	public override void Reset() {
+		base.Reset();
+		_doingBomb = false;
+	}
 	public override int Step { get {
 		if (Tracker.HaveRelic(Relics.RelicEffect.CONVERT_COIN_TO_DAMAGE))
 			return 0;
-		if (doingBomb) {
+		if (_doingBomb) {
 			if (Tracker.HaveRelic(Relics.RelicEffect.BOMB_NAV_GOLD))
 				return 15;
 			else
@@ -940,13 +986,13 @@ public class Navigationflation : SimpleCounter {
 	[HarmonyPrefix]
 	private static void StartBomb() {
 		Navigationflation t = (Navigationflation)Tracker.trackers[Relics.RelicEffect.INCREASED_NAV_GOLD];
-		t.doingBomb = true;
+		t._doingBomb = true;
 	}
 	[HarmonyPatch(typeof(Bomb), "PegActivated")]
 	[HarmonyPostfix]
 	private static void EndBomb() {
 		Navigationflation t = (Navigationflation)Tracker.trackers[Relics.RelicEffect.INCREASED_NAV_GOLD];
-		t.doingBomb = false;
+		t._doingBomb = false;
 	}
 	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";
 }
@@ -988,6 +1034,10 @@ public class GardenersGloves : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REDUCE_ORB_SELF_DAMAGE;
 	private bool _active = false;
 	private float _currentDamage = 0;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		if (_active)
 			count += (int)Mathf.Ceil(_currentDamage / 2);
@@ -1150,6 +1200,10 @@ public class OrbertsStory : Tracker {
 public class KnightCap : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.HEAL_WITH_BALLWARK;
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		_active = true;
 	}
@@ -1255,6 +1309,10 @@ public class MaskOfSorrow : SimpleCounter {
 public class MaskOfJoy : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INCREASE_POSITIVE_STATUS;
 	private bool _active = true;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		if (_active)
 			base.Used();
@@ -1534,7 +1592,6 @@ public class EndlessDevouRing : TodoTracker {
 	// TODO: Tracking of relics that buff/debuff pegs
 }
 
-[HarmonyPatch]
 public class BastionReaction : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LOSE_HP_GAIN_BALLWARK;
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
@@ -1599,6 +1656,10 @@ public class SteadyScope : SimpleCounter {
 public class SpiffyCrit : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ATTACKS_APPLY_EXPLOITABALL;
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		_active = true;
 	}
@@ -1711,6 +1772,10 @@ public class CrystalCatalyst : SimpleCounter {
 public class SproutingSpinvestment : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAIN_PERCENTAGE_OF_GOLD_EACH_EVENT;
 	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
 	public override void Used() {
 		_active = true;
 	}
