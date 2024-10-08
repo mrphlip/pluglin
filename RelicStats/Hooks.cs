@@ -10,21 +10,30 @@ public class Hooks {
 	[HarmonyPatch(typeof(GameInit), "Start")]
 	[HarmonyPrefix]
 	static private void StartGame(GameInit __instance) {
-		LoadMapData loadData = Refl<LoadMapData>.GetAttr(__instance, "LoadData");
-		if (loadData.NewGame) {
-			Plugin.Logger.LogInfo("New game, resetting all counters");
-			Tracker.ResetAll();
-		}
-		else {
-			Plugin.Logger.LogError("No handling for loading a game yet!");
-			Tracker.ResetAll();
-		}
+		Plugin.Logger.LogInfo("New game, resetting all counters");
+		Tracker.ResetAll();
 	}
 
 	[HarmonyPatch(typeof(Relics.RelicManager), "AddRelic")]
 	[HarmonyPostfix]
 	static private void AddRelic(Relics.Relic relic) {
-		Tracker.AddRelic(relic.effect);
+		Tracker.AddRelic(relic.effect, true);
+	}
+	[HarmonyPatch(typeof(Relics.RelicManager), "LoadRelicFromSaveFile")]
+	[HarmonyPostfix]
+	static private void AddRelicFromSave(Relics.Relic relic) {
+		Tracker.AddRelic(relic.effect, false);
+	}
+
+	[HarmonyPatch(typeof(Relics.RelicManager), "LoadRelicData")]
+	[HarmonyPostfix]
+	static private void LoadRelicData() {
+		Tracker.LoadData();
+	}
+	[HarmonyPatch(typeof(Relics.RelicManager), "SaveRelicData")]
+	[HarmonyPostfix]
+	static private void SaveRelicData() {
+		Tracker.SaveData();
 	}
 
 	[HarmonyPatch(typeof(Relics.RelicManager), "AttemptUseRelic")]

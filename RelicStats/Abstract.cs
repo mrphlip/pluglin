@@ -36,23 +36,58 @@ public abstract string Tooltip { get; }
 	private static void AddTracker(Tracker tracker) {
 		trackers.Add(tracker.Relic, tracker);
 	}
-	public static void ResetAll() {
+	public static void ResetAll(bool clearOwned = true) {
 		foreach (var tracker in trackers) {
 			tracker.Value.Reset();
 		}
-		relics.Clear();
+		if (clearOwned)
+			relics.Clear();
 	}
 	// Maintain our own cache of which relics are collected, to avoid
 	// having to go digging for a RelicManager every time we need to check
-	public static void AddRelic(Relics.RelicEffect relic) {
+	public static void AddRelic(Relics.RelicEffect relic, bool isNew) {
 		if (!relics.Contains(relic)) {
 			Tracker tracker;
-			if (trackers.TryGetValue(relic, out tracker))
+			if (isNew && trackers.TryGetValue(relic, out tracker))
 				tracker.Reset();
 			relics.Add(relic);
 		}
 	}
 	public static bool HaveRelic(Relics.RelicEffect relic) => relics.Contains(relic);
+
+	public static void LoadData() {
+		ResetAll(false);
+		RelicStatsSaveData data = (RelicStatsSaveData)ToolBox.Serialization.DataSerializer.Load<SaveObjectData>(RelicStatsSaveData.KEY, ToolBox.Serialization.DataSerializer.SaveType.RUN);
+		if (data != null) {
+			foreach (var item in data.relicStates) {
+				Tracker tracker;
+				if (trackers.TryGetValue((Relics.RelicEffect)item.Key, out tracker)) {
+					tracker.State = item.Value;
+				}
+			}
+		}
+	}
+	public static void SaveData() {
+		RelicStatsSaveData data = new RelicStatsSaveData();
+		foreach (var tracker in trackers.Values) {
+			if (HaveRelic(tracker.Relic)) {
+				data.relicStates[(int)tracker.Relic] = tracker.State;
+			}
+		}
+		data.Save();
+	}
+}
+
+public class RelicStatsSaveData : SaveObjectData {
+	public readonly static String KEY = $"{MyPluginInfo.PLUGIN_GUID}_RelicData";
+
+	public override String Name => KEY;
+
+	public Dictionary<int, object> relicStates;
+
+	public RelicStatsSaveData() : base(true, ToolBox.Serialization.DataSerializer.SaveType.RUN) {
+		this.relicStates = new Dictionary<int, object>();
+	}
 }
 
 public abstract class NoopTracker : Tracker {
