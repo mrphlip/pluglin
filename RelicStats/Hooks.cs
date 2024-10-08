@@ -1,4 +1,5 @@
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -11,6 +12,12 @@ public class Hooks {
 	[HarmonyPrefix]
 	static private void StartGame(GameInit __instance) {
 		Plugin.Logger.LogInfo("New game, resetting all counters");
+		Tracker.ResetAll();
+	}
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunSummary), "LoadMainMenu")]
+	[HarmonyPrefix]
+	static private void EndGame(GameInit __instance) {
+		Plugin.Logger.LogInfo("Game over, resetting all counters");
 		Tracker.ResetAll();
 	}
 
@@ -28,11 +35,13 @@ public class Hooks {
 	[HarmonyPatch(typeof(Relics.RelicManager), "LoadRelicData")]
 	[HarmonyPostfix]
 	static private void LoadRelicData() {
+		Plugin.Logger.LogInfo("Loading relic state");
 		Tracker.LoadData();
 	}
 	[HarmonyPatch(typeof(Relics.RelicManager), "SaveRelicData")]
 	[HarmonyPostfix]
 	static private void SaveRelicData() {
+		Plugin.Logger.LogInfo("Saving relic state");
 		Tracker.SaveData();
 	}
 
@@ -186,6 +195,38 @@ public class Hooks {
 		}
 		RefresherCourse t = (RefresherCourse)Tracker.trackers[Relics.RelicEffect.REFRESH_BUFF];
 		t.ApplyStatusEffect(statusEffect);
+	}
+
+	private static bool _buildingRunSummary = false;
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
+	[HarmonyPrefix]
+	private static void SetupRelicsPre() {
+		_buildingRunSummary = true;
+	}
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
+	[HarmonyPostfix]
+	private static void SetupRelicsPost() {
+		_buildingRunSummary = false;
+	}
+	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutIcon), "InitializeRelic")]
+	[HarmonyPostfix]
+	private static void FixRelicIcon(PeglinUI.LoadoutManager.LoadoutIcon __instance) {
+		if (_buildingRunSummary) {
+			if (__instance.text != null) {
+				// This text box extends out and makes the mouseover hitbox weird
+				// It's blank for relics, anyway (it's used for the "x5" caption for orbs)
+				UnityEngine.Object.Destroy(__instance.text);
+				__instance.text = null;
+			}
+			var mousecomponent = __instance.GetComponent<PeglinUI.UIUtils.MouseOverDetectorPointerHandler>();
+			var selectcomponent = __instance.GetComponent<SelectionEventListener>();
+			if (mousecomponent == null)
+				__instance.gameObject.AddComponent<PeglinUI.UIUtils.MouseOverDetectorPointerHandler>();
+			if (selectcomponent == null)
+				__instance.gameObject.AddComponent<SelectionEventListener>();
+			if (mousecomponent == null || selectcomponent == null)
+				__instance.SetupTooltipEventsRelic();
+		}
 	}
 }
 
