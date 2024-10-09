@@ -35,6 +35,12 @@ public class Plugin : BaseUnityPlugin {
 		if (String.IsNullOrEmpty(tooltip))
 			return;
 
-		__instance.descriptionText.text = $"{__instance.descriptionText.text}\n<sprite name=\"BULLET\"><indent=8%>{tooltip}</indent>";
+		string oldTooltip = __instance.descriptionText.text;
+		I2.Loc.Localize loc = __instance.descriptionText.GetComponent<I2.Loc.Localize>();
+		loc.mTerm = null;
+		loc.mTermSecondary = null;
+		loc.FinalTerm = null;
+		loc.FinalSecondaryTerm = null;
+		__instance.descriptionText.text = $"{oldTooltip}\n<sprite name=\"BULLET\"><indent=8%>{tooltip}</indent>";
 	}
 }
