@@ -104,8 +104,10 @@ public class RoundGuard : SimpleCounter {
 		_active = true;
 	}
 	public void DamageAvoided(float damage) {
-		if (_active)
+		if (_active) {
 			count += (int)damage;
+			Updated();
+		}
 		_active = false;
 	}
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
@@ -129,7 +131,9 @@ public class MatryoshkaDoll : SimpleCounter {
 	[HarmonyPostfix]
 	private static void ArmOrb() {
 		if (Tracker.HaveRelic(Relics.RelicEffect.MATRYOSHKA)) {
-			((MatryoshkaDoll)Tracker.trackers[Relics.RelicEffect.MATRYOSHKA]).count += 1;
+			MatryoshkaDoll t = ((MatryoshkaDoll)Tracker.trackers[Relics.RelicEffect.MATRYOSHKA]);
+			t.count += 1;
+			t.Updated();
 		}
 	}
 	public override string Tooltip => $"{count} orb{Utils.Plural(count)} duplicated";
@@ -151,8 +155,10 @@ public class Recombombulator : SimpleCounter {
 	[HarmonyPostfix]
 	private static void ResetBomb() {
 		Recombombulator t = (Recombombulator)Tracker.trackers[Relics.RelicEffect.BOMBS_RESPAWN];
-		if (t._active)
+		if (t._active) {
 			t.count++;
+			t.Updated();
+		}
 	}
 	[HarmonyPatch(typeof(Battle.PegManager), "ResetPegs")]
 	[HarmonyPostfix]
@@ -200,6 +206,7 @@ public class RefreshingPunch : SimpleCounter {
 	private static void RefreshSplashPre() {
 		RefreshingPunch t = (RefreshingPunch)Tracker.trackers[Relics.RelicEffect.REFRESH_PEGS_SPLASH];
 		t.count++;
+		t.Updated();
 	}
 }
 
@@ -237,8 +244,10 @@ public class Ambidexionary : SimpleCounter {
 		if (!Tracker.HaveRelic(Relic))
 			return;
 		BattleController battleController = Utils.GetResource<BattleController>();
-		if (battleController.NumShotsDiscarded == battleController.MaxDiscardedShots)
+		if (battleController.NumShotsDiscarded == battleController.MaxDiscardedShots) {
 			count += 1;
+			Updated();
+		}
 	}
 	public override string Tooltip => $"{count} extra discard{Utils.Plural(count)} used";
 }
@@ -281,8 +290,10 @@ public class SealedConviction : SimpleCounter {
 		_active = false;
 	}
 	public override void Used() {
-		if (_active)
+		if (_active) {
 			count += Step;
+			Updated();
+		}
 	}
 	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStartingBonuses")]
 	[HarmonyPrefix]
@@ -511,8 +522,10 @@ public class InfernalIngot : HealingCounter {
 		t._damageActive = false;
 	}
 	public void Damage(float amount) {
-		if (_damageActive)
+		if (_damageActive) {
 			damageCount += (int)amount;
+			Updated();
+		}
 		_damageActive = false;
 	}
 	public override string Tooltip => $"{damageCount} <style=damage>damage dealt</style>; {base.Tooltip}";
@@ -597,8 +610,10 @@ public class WandOfSkulltimateWrath : PegDamageCounter {
 		t._selfDamageActive = false;
 	}
 	public virtual void SelfDamage(float amount) {
-		if (_selfDamageActive)
+		if (_selfDamageActive) {
 			selfDamageCount += (int)amount;
+			Updated();
+		}
 		_selfDamageActive = false;
 	}
 	public override string Tooltip => $"{base.Tooltip}; {selfDamageCount} <style=damage>self-damage</style>";
@@ -646,10 +661,14 @@ public class EyeOfTurtle : Tracker {
 		orbCount = relicCount = 0;
 	}
 	public override void Used() {
-		if (_orbActive)
+		if (_orbActive) {
 			orbCount++;
-		if (_relicActive)
+			Updated();
+		}
+		if (_relicActive) {
 			relicCount++;
+			Updated();
+		}
 		_orbActive = _relicActive = false;
 	}
 	[HarmonyPatch(typeof(PopulateSuggestionOrbs), "GenerateAddableOrbs")]
@@ -787,6 +806,7 @@ public class Puppet : SimpleCounter {
 	public override void Used() {}
 	public void DamageAvoided(float damage) {
 		count += (int)damage;
+		Updated();
 	}
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
@@ -884,10 +904,11 @@ public class RefresherCourse : Tracker {
 	public void ApplyStatusEffect(Battle.StatusEffects.StatusEffect statusEffect) {
 		if (!_active)
 			return;
-		if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Strength)
+		if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Strength) 
 			musCount += statusEffect.Intensity;
 		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Finesse)
 			spinCount += statusEffect.Intensity;
+		Updated();
 		_active = false;
 	}
 	public override object State {
@@ -926,8 +947,10 @@ public class SeraphicShield : SimpleCounter {
 		_active = true;
 	}
 	public void DamageAvoided(float damage) {
-		if (_active)
+		if (_active) {
 			count += (int)damage;
+			Updated();
+		}
 		_active = false;
 	}
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
@@ -1039,8 +1062,10 @@ public class GardenersGloves : SimpleCounter {
 		_active = false;
 	}
 	public override void Used() {
-		if (_active)
+		if (_active) {
 			count += (int)Mathf.Ceil(_currentDamage / 2);
+			Updated();
+		}
 		_active = false;
 	}
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "DealSelfDamage")]
@@ -1069,6 +1094,7 @@ public class SashOfFocus : SimpleCounter {
 	public override void Used() {}
 	public void DamageAvoided(float damage) {
 		count += (int)damage;
+		Updated();
 	}
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
@@ -1121,6 +1147,7 @@ public class BranchOfEmber : Tracker {
 			t.blindCount += statusEffect.Intensity;
 		else if (statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Thorned)
 			t.brambleCount += statusEffect.Intensity;
+		t.Updated();
 		t._active = false;
 	}
 	public override object State {
@@ -1137,6 +1164,7 @@ public class RipostalService : SimpleCounter {
 	public override void Used() {}
 	public void Damage(float damage) {
 		count += (int)damage;
+		Updated();
 	}
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
@@ -1170,6 +1198,7 @@ public class OrbertsStory : Tracker {
 		if (seededUnknownNodeData.typeRoll >= 0.05f && seededUnknownNodeData.typeRoll < 0.12f) {
 			OrbertsStory t = (OrbertsStory)Tracker.trackers[Relics.RelicEffect.MORE_TREASURE_NODES];
 			t.treasureCount++;
+			t.Updated();
 		}
 	}
 	[HarmonyPatch(typeof(Scenarios.ChestScenarioController), "OpenChest")]
@@ -1185,6 +1214,7 @@ public class OrbertsStory : Tracker {
 		{
 			OrbertsStory t = (OrbertsStory)Tracker.trackers[Relics.RelicEffect.MORE_TREASURE_NODES];
 			t.rareCount++;
+			t.Updated();
 		}
 	}
 	public override object State {
@@ -1217,8 +1247,10 @@ public class KnightCap : SimpleCounter {
 	[HarmonyPrefix]
 	private static void AddMaxHP(float amount) {
 		KnightCap t = (KnightCap)Tracker.trackers[Relics.RelicEffect.HEAL_WITH_BALLWARK];
-		if (t._active)
+		if (t._active) {
 			t.count += (int)amount;
+			t.Updated();
+		}
 		t._active = false;
 	}
 	public override string Tooltip => $"{count} max HP added";
@@ -1289,6 +1321,7 @@ public class Roundreloquence : Tracker {
 			transpCount += statusEffect.Intensity;
 		else
 			Plugin.Logger.LogWarning($"Unexpected debuff from Roundreloquence: {statusEffect.EffectType}");
+		Updated();
 		_active = false;
 	}
 	public override object State {
@@ -1439,6 +1472,7 @@ public class AliensRock : SimpleCounter {
 			if (enemy != null && !Enumerable.Contains(enemiesIgnore, enemy))
 				enemyCount++;
 		count += enemyCount * (int)damage;
+		Updated();
 	}
 	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
@@ -1550,7 +1584,7 @@ public class BeleagueredBoots : NoopTracker {
 
 public class DoubleBallusion : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_GAIN;
-	// Not entirely sure what this one is supposed to do?
+	// Not entirely sure what this one is intended to do?
 	// Seems to double ballusion gained, but also you lose all ballusion on dodge instead of half
 	// Luckily, it doesn't actually exist
 }
@@ -1672,6 +1706,7 @@ public class SpiffyCrit : SimpleCounter {
 		foreach (var e in __result) {
 			if (e.EffectType == Battle.StatusEffects.StatusEffectType.Exploitaball) {
 				t.count += e.Intensity;
+				t.Updated();
 			}
 		}
 		t._active = false;
@@ -1732,6 +1767,7 @@ public class TornSash : SimpleCounter {
 	public override void Used() {}
 	public void DamageAvoided(float damage) {
 		count += (int)Mathf.Ceil(damage);
+		Updated();
 	}
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
@@ -1746,6 +1782,7 @@ public class CallOfTheVoid : SimpleCounter {
 		if (Tracker.HaveRelic(Relics.RelicEffect.ALL_ORBS_DELETE_PEGS)) {
 			CallOfTheVoid t = (CallOfTheVoid)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_DELETE_PEGS];
 			t.count++;
+			t.Updated();
 		}
 	}
 	public override string Tooltip => $"{count} <sprite name=\"PEG\"> destroyed";
@@ -1783,8 +1820,10 @@ public class SproutingSpinvestment : SimpleCounter {
 	[HarmonyPrefix]
 	private static void AddGold(int amount) {
 		SproutingSpinvestment t = (SproutingSpinvestment)Tracker.trackers[Relics.RelicEffect.GAIN_PERCENTAGE_OF_GOLD_EACH_EVENT];
-		if (t._active)
+		if (t._active) {
 			t.count += amount;
+			t.Updated();
+		}
 		t._active = false;
 	}
 	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";

@@ -16,6 +16,9 @@ public abstract string Tooltip { get; }
 	public abstract object State { get; set; }
 	public abstract void Used();
 	public virtual void Checked() {}
+	public void Updated() {
+		Plugin.UpdateTooltip(Relic);
+	}
 
 
 	public static readonly Dictionary<Relics.RelicEffect, Tracker> trackers = new Dictionary<Relics.RelicEffect, Tracker>();
@@ -148,8 +151,8 @@ public abstract class SimpleCounter : Tracker {
 	public int count = 0;
 
 	public virtual int Step => 1;
-	public override void Reset() { count = 0; }
-	public override void Used() { count += Step; }
+	public override void Reset() { count = 0; Updated(); }
+	public override void Used() { count += Step; Updated(); }
 	public override object State {
 		get => count;
 		set {
@@ -166,8 +169,10 @@ public abstract class HealingCounter : SimpleCounter {
 	}
 	public override void Used() {}
 	public virtual void Heal(float amount) {
-		if (_active)
+		if (_active) {
 			count += (int)amount;
+			Updated();
+		}
 		_active = false;
 	}
 	public override string Tooltip => $"{count} <style=heal>healed</style>";
@@ -181,8 +186,10 @@ public abstract class SelfDamageCounter : SimpleCounter {
 	}
 	public override void Used() {}
 	public virtual void SelfDamage(float amount) {
-		if (_active)
+		if (_active) {
 			count += (int)amount;
+			Updated();
+		}
 		_active = false;
 	}
 	public override string Tooltip => $"{count} <style=damage>self-damage</style>";
@@ -191,7 +198,7 @@ public abstract class SelfDamageCounter : SimpleCounter {
 public abstract class DamageCounter : Tracker {
 	protected int goodCount = 0, badCount = 0;
 
-	public override void Reset() { goodCount = badCount = 0; }
+	public override void Reset() { goodCount = badCount = 0; Updated(); }
 	public override void Used() {}
 	public override object State {
 		get => (goodCount, badCount);
@@ -211,10 +218,13 @@ public abstract class DamageCounter : Tracker {
 			return;
 		float fullDamage = attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
 		float baseDamage = GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
-		if (fullDamage > baseDamage)
+		if (fullDamage > baseDamage) {
 			goodCount += (int)(fullDamage - baseDamage);
-		else if (fullDamage < baseDamage)
+			Updated();
+		} else if (fullDamage < baseDamage) {
 			badCount += (int)(baseDamage - fullDamage);
+			Updated();
+		}
 	}
 	public abstract float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount);
 }
@@ -292,8 +302,10 @@ public abstract class DamageTargetedCounter : SimpleCounter {
 		_active = true;
 	}
 	public virtual void Damage(float amount) {
-		if (_active)
+		if (_active) {
 			count += (int)amount;
+			Updated();
+		}
 		_active = false;
 	}
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
@@ -315,8 +327,9 @@ public abstract class DamageAllCounter : SimpleCounter {
 	private void DamageAllEnemies(float damageAmount) {
 		if (_active) {
 			count += Utils.EnemyDamageCount() * (int)damageAmount;
-			_active = false;
+			Updated();
 		}
+		_active = false;
 	}
 
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
@@ -333,8 +346,10 @@ public abstract class StatusEffectCounter : SimpleCounter {
 		_active = true;
 	}
 	public void ApplyStatusEffect(Battle.StatusEffects.StatusEffect statusEffect) {
-		if (_active && statusEffect.EffectType == type)
+		if (_active && statusEffect.EffectType == type) {
 			count += statusEffect.Intensity;
+			Updated();
+		}
 		_active = false;
 	}
 	public override string Tooltip => $"{count} {Utils.TypeDesc(type)} added</style>";
