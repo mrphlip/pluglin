@@ -6,7 +6,7 @@
 		<Product>Relic Stats</Product>
 		<BepInExPluginGuid>com.mrphlip.peglin.RelicStats</BepInExPluginGuid>
 		<Description>Show usage stats on acquired relics</Description>
-		<Version>0.1</Version>
+		<Version>0.2</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 		<RestoreAdditionalProjectSources>
