@@ -1,5 +1,22 @@
 # 0.2.0
 * Fix a bug with Spheridae's Fate that was causing slowdown
+* Add stats for:
+	* Cursed Mask
+	* Rallying Heart
+	* Slimy Salve
+	* Glorious SuffeRing
+	* Pumpkin Pi
+	* Axe Me Anything
+	* A Good Slime
+	* Adventurine
+	* Endless DevouRing
+	* Refresh Perspective
+	* Subtraction Reaction
+* Only relics still on the todo list are the ones that affect projectile behaviour:
+	* Overwhammer
+	* Grabby Hand
+	* Prime Rod of Frost
+	* Au Auger
 
 # 0.1.0
 * Initial public release

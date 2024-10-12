@@ -291,6 +291,30 @@ public abstract class MultDamageCounter : DamageCounter {
 		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
 	}
 }
+public abstract class PegBuffDamageCounter : DamageCounter {
+	protected Dictionary<int, int> _pegBuffs = new Dictionary<int, int>();
+	protected int _bonus = 0;
+	public override void Reset() {
+		base.Reset();
+		NewBattle();
+	}
+	public void NewBattle() {
+		_pegBuffs.Clear();
+		_bonus = 0;
+	}
+	public void HandleHitPeg(Peg peg) {
+		if (Tracker.HaveRelic(Relic)) {
+			if (_pegBuffs.ContainsKey(peg.gameObject.GetInstanceID())) {
+				_bonus += (int)(_pegBuffs[peg.gameObject.GetInstanceID()] * peg.buffDamageMultiplier);
+			}
+		}
+	}
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		dmgBonus -= _bonus;
+		_bonus = 0;
+		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+	}
+}
 
 public abstract class DamageTargetedCounter : SimpleCounter {
 	protected bool _active = false;

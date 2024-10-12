@@ -276,7 +276,7 @@ public class AmbiguousAmulet : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.WALL_BOUNCES_COUNT;
 }
 
-public class CursedMask : NoopTracker {
+public class CursedMask : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CONFUSION_RELIC;
 }
 
@@ -378,9 +378,31 @@ public class UnicornHorn : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.LONGER_AIMER;
 }
 
-public class RallyingHeart : TodoTracker {
+[HarmonyPatch]
+public class RallyingHeart : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL;
-	// TODO: A bit tricky, saving this one for later
+	public override void Used() {}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HealEndOfBattleAmount")]
+	[HarmonyPrefix]
+	private static void Heal(Battle.PlayerHealthController __instance) {
+		if (Tracker.HaveRelic(Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL)) {
+			int healAmount = __instance.endOfBattleHealAmount;
+
+			Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
+			var owned = Refl<Dictionary<Relics.RelicEffect, Relics.Relic>>.GetAttr(relicManager, "_ownedRelics");
+			Relics.Relic r = owned[Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL];
+			owned.Remove(Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL);
+			int baseHeal = __instance.endOfBattleHealAmount;
+			owned.Add(Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL, r);
+
+			RallyingHeart t = (RallyingHeart)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL];
+			if (healAmount > baseHeal) {
+				t.count += healAmount - baseHeal;
+				t.Updated();
+			}
+		}
+	}
+	public override string Tooltip => $"{count} <style=heal>healed</style>";
 }
 
 public class SufferTheSling : OrbDamageCounter {
@@ -455,12 +477,9 @@ public class SlimySalve : HealingCounter {
 		t._slimedPegs.Add(__instance.gameObject.GetInstanceID());
 		t._sliming = false;
 	}
-	[HarmonyPatch(typeof(Battle.PegManager), "InitializePegs")]
-	[HarmonyPostfix]
-	private static void NewBattle() {
-		SlimySalve t = (SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME];
-		t._slimedPegs.Clear();
-		t._sliming = false;
+	public void NewBattle() {
+		_slimedPegs.Clear();
+		_sliming = false;
 	}
 	[HarmonyPatch(typeof(RegularPeg), "PegActivated")]
 	[HarmonyPrefix]
@@ -712,9 +731,41 @@ public class EyeOfTurtle : Tracker {
 	}
 }
 
-public class GloriousSuffeRing : TodoTracker {
+public class GloriousSuffeRing : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_BUFF;
-	// TODO: Tracking of relics that buff/debuff pegs
+	private Dictionary<int, int> _pegBuffs = new Dictionary<int, int>();
+	private int _bonus = 0;
+	public override void Reset() {
+		base.Reset();
+		NewBattle();
+	}
+	public void NewBattle() {
+		_pegBuffs.Clear();
+		_bonus = 0;
+	}
+
+	public void HandleRelicBuff(Peg peg) {
+		if (Tracker.HaveRelic(Relic)) {
+			if (_pegBuffs.ContainsKey(peg.gameObject.GetInstanceID()))
+				_pegBuffs[peg.gameObject.GetInstanceID()] += Relics.RelicManager.ALL_ORBS_DEBUFF_AMOUNT;
+			else
+				_pegBuffs[peg.gameObject.GetInstanceID()] = Relics.RelicManager.ALL_ORBS_DEBUFF_AMOUNT;
+		}
+	}
+
+	public void HandleHitPeg(Peg peg) {
+		if (Tracker.HaveRelic(Relic)) {
+			if (_pegBuffs.ContainsKey(peg.gameObject.GetInstanceID())) {
+				_bonus += (int)(_pegBuffs[peg.gameObject.GetInstanceID()] * peg.buffDamageMultiplier);
+			}
+		}
+	}
+
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		float result = base.GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus - _bonus, critCount);
+		_bonus = 0;
+		return result;
+	}
 }
 
 public class SapperSack : NoopTracker {
@@ -857,9 +908,24 @@ public class ShortStack : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_IN_RELIC;
 }
 
-public class PumpkinPi : TodoTracker {
+[HarmonyPatch]
+public class PumpkinPi : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SLOT_PORTAL;
-	// TODO: No easy hook here, would have to do more code injection
+	public override void Used() {}
+
+	[HarmonyPatch(typeof(SlotTrigger), "OnTriggerEnter2D")]
+	[HarmonyPrefix]
+	private static void SlotEnter(SlotTrigger __instance, Collider2D collision) {
+		if (!Tracker.HaveRelic(Relics.RelicEffect.SLOT_PORTAL))
+			return;
+		PachinkoBall component = collision.GetComponent<PachinkoBall>();
+		if (component != null && BattleController.AwaitingShotCompletion() && Refl<bool>.GetAttr(__instance, "_isPortal") && Refl<int>.GetAttr(__instance, "_portalUsageCount") < 3) {
+			PumpkinPi t = (PumpkinPi)Tracker.trackers[Relics.RelicEffect.SLOT_PORTAL];
+			t.count++;
+			t.Updated();
+		}
+	}
+	public override string Tooltip => $"{count} orb{Utils.Plural(count)} teleported";
 }
 
 public class HaglinsSatchel : NoopTracker {
@@ -924,13 +990,64 @@ public class HerosBackpack : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADJACENCY_BONUS;
 }
 
-public class AimLimiter : NoopTracker {
+public class AimLimiter : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.AIM_LIMITER;
 }
 
-public class AxeMeAnything : TodoTracker {
+[HarmonyPatch]
+public class AxeMeAnything : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NO_DAMAGE_REDUCTION;
-	// TODO: Doing this for orbs seems simple enough, but for bombs have to dig deep
+	public override void Used() {}
+
+	private bool _bombActive = false;
+	private float _damageMod = 0f;
+	public override void Reset() {
+		base.Reset();
+		_bombActive = false;
+		_damageMod = 0f;
+	}
+	[HarmonyPatch(typeof(BattleController), "OnBombDeath")]
+	[HarmonyPrefix]
+	private static void EnableBomb() {
+		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
+		t._bombActive = true;
+	}
+	[HarmonyPatch(typeof(BattleController), "OnBombDeath")]
+	[HarmonyPostfix]
+	private static void DisableBomb() {
+		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
+		t._bombActive = false;
+	}
+	[HarmonyPatch(typeof(Battle.Attacks.Attack), "GetDamageMod")]
+	[HarmonyPostfix]
+	private static void GetDamageMod(float enemyDamageMod, float __result) {
+		if (!Tracker.HaveRelic(Relics.RelicEffect.NO_DAMAGE_REDUCTION))
+			return;
+		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
+		if (enemyDamageMod < 1f && __result > 1f) {
+			t._damageMod = (__result - enemyDamageMod) / __result;
+		}
+		else
+			t._damageMod = 0;
+	}
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "Damage")]
+	[HarmonyPrefix]
+	private static void EnemyDamage(Battle.Enemies.Enemy __instance, float damage, float damageMod) {
+		if (!Tracker.HaveRelic(Relics.RelicEffect.NO_DAMAGE_REDUCTION))
+			return;
+		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
+		if (t._bombActive) {
+			if (__instance.bombDamageMod < damageMod) {
+				t.count += (int)(damage * (damageMod - __instance.bombDamageMod));
+				t.Updated();
+			}
+		} else if (t._damageMod != 0) {
+			t.count += (int)(damage * damageMod * t._damageMod);
+			t.Updated();
+			t._damageMod = 0;
+		}
+	}
+	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
 public class SeraphicShield : SimpleCounter {
@@ -1389,14 +1506,78 @@ public class BeckoningCrit : SimpleCounter {
 	public override string Tooltip => $"{count} crit{Utils.Plural(count)}";
 }
 
-public class AGoodSlime : TodoTracker {
+[HarmonyPatch]
+public class AGoodSlime : PegBuffDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SLIME_BUFFS_PEGS;
-	// TODO: Tracking of relics that buff/debuff pegs
+	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Peg), "AddBuff")]
+	[HarmonyPrefix]
+	private static void AddBuff(Peg __instance, int amount) {
+		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
+		if (t._active) {
+			if (t._pegBuffs.ContainsKey(__instance.gameObject.GetInstanceID()))
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] += amount;
+			else
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] = amount;
+		}
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(RegularPeg), "CheckAndApplySlime")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(LongPeg), "CheckAndApplySlime")]
+	[HarmonyPostfix]
+	private static void DisableLong() {
+		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.PegManager), "AddQueuedDamageReductionSlime")]
+	[HarmonyPostfix]
+	private static void DisableQueued() {
+		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
+		t._active = false;
+	}
 }
 
-public class Adventurine : TodoTracker {
+[HarmonyPatch]
+public class Adventurine : PegBuffDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BUFF_FIRST_PEG_HIT;
-	// TODO: Tracking of relics that buff/debuff pegs
+	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Peg), "CheckForPachinkoBuff")]
+	[HarmonyPrefix]
+	private static void CheckBuffPre() {
+		Adventurine t = (Adventurine)Tracker.trackers[Relics.RelicEffect.BUFF_FIRST_PEG_HIT];
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Peg), "CheckForPachinkoBuff")]
+	[HarmonyPostfix]
+	private static void CheckBuffPre(Peg __instance) {
+		Adventurine t = (Adventurine)Tracker.trackers[Relics.RelicEffect.BUFF_FIRST_PEG_HIT];
+		if (t._active) {
+			if (t._pegBuffs.ContainsKey(__instance.gameObject.GetInstanceID()))
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] += Relics.RelicManager.FIRST_PEG_HIT_BUFF_AMOUNT;
+			else
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] = Relics.RelicManager.FIRST_PEG_HIT_BUFF_AMOUNT;
+		}
+		t._active = false;
+	}
 }
 
 [HarmonyPatch]
@@ -1621,9 +1802,49 @@ public class ConstrictingChains : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.AIM_LIMITER_MULTIBALL;
 }
 
-public class EndlessDevouRing : TodoTracker {
+public class EndlessDevouRing : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_DEBUFF;
-	// TODO: Tracking of relics that buff/debuff pegs
+	public override void StartAddPeg() {
+		_active = false;
+	}
+	public override void Used() {}
+	public override void Checked() {
+		_active = true;
+	}
+	public override void AddPeg(float multiplier, int bonus) {
+		base.AddPeg(multiplier / 2f, 0);
+	}
+
+	private Dictionary<int, int> _pegBuffs = new Dictionary<int, int>();
+	private int _bonus = 0;
+	public override void Reset() {
+		base.Reset();
+		NewBattle();
+	}
+	public void NewBattle() {
+		_pegBuffs.Clear();
+		_bonus = 0;
+	}
+	public void HandleRelicBuff(Peg peg) {
+		if (Tracker.HaveRelic(Relic)) {
+			if (_pegBuffs.ContainsKey(peg.gameObject.GetInstanceID()))
+				_pegBuffs[peg.gameObject.GetInstanceID()] += Relics.RelicManager.ALL_ORBS_DEBUFF_AMOUNT;
+			else
+				_pegBuffs[peg.gameObject.GetInstanceID()] = Relics.RelicManager.ALL_ORBS_DEBUFF_AMOUNT;
+		}
+	}
+	public void HandleHitPeg(Peg peg) {
+		if (Tracker.HaveRelic(Relic)) {
+			if (_pegBuffs.ContainsKey(peg.gameObject.GetInstanceID())) {
+				_bonus += (int)(_pegBuffs[peg.gameObject.GetInstanceID()] * peg.buffDamageMultiplier);
+			}
+		}
+	}
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+		float result = base.GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus - _bonus, critCount);
+		_bonus = 0;
+		return result;
+	}
 }
 
 public class BastionReaction : StatusEffectCounter {
@@ -1636,8 +1857,35 @@ public class IsDisYourCard : StatusEffectCounter {
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class RefreshPerspective : NoopTracker {
+[HarmonyPatch]
+public class RefreshPerspective : PegBuffDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_UPGRADES_PEGS;
+	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Peg), "AddBuff")]
+	[HarmonyPrefix]
+	private static void AddBuff(Peg __instance, int amount) {
+		RefreshPerspective t = (RefreshPerspective)Tracker.trackers[Relics.RelicEffect.REFRESH_UPGRADES_PEGS];
+		if (t._active) {
+			if (t._pegBuffs.ContainsKey(__instance.gameObject.GetInstanceID()))
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] += amount;
+			else
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] = amount;
+		}
+		t._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.PegManager), "ResetPegs")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		RefreshPerspective t = (RefreshPerspective)Tracker.trackers[Relics.RelicEffect.REFRESH_UPGRADES_PEGS];
+		t._active = false;
+	}
 }
 
 public class Mauliflower : StatusEffectCounter {
@@ -1714,8 +1962,9 @@ public class SpiffyCrit : SimpleCounter {
 	public override string Tooltip => $"{count} <style=exploitaball>Exploitaball applied</style>";
 }
 
-public class SubtractionReaction : NoopTracker {
+public class SubtractionReaction : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_CREATES_DAMAGE_REDUCTION_SLIME;
+	public override string Tooltip => $"{count} damage reduction slime applied";
 }
 
 public class CounterfeitCrits : NoopTracker {

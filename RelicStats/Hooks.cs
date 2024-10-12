@@ -77,8 +77,7 @@ public class Hooks {
 		=> HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
 	private static void HandleFire(Battle.Attacks.Attack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
 		foreach (var tracker in Tracker.trackers.Values) {
-			DamageCounter dmgtracker = tracker as DamageCounter;
-			if (dmgtracker != null)
+			if (tracker is DamageCounter dmgtracker)
 				dmgtracker.HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
 		}
 	}
@@ -87,8 +86,7 @@ public class Hooks {
 	[HarmonyPostfix]
 	private static void AddDamageMultiplier(float mult) {
 		foreach (var tracker in Tracker.trackers.Values) {
-			MultDamageCounter dmgtracker = tracker as MultDamageCounter;
-			if (dmgtracker != null)
+			if (tracker is MultDamageCounter dmgtracker)
 				dmgtracker.AddDamageMultiplier(mult);
 		}
 	}
@@ -101,8 +99,7 @@ public class Hooks {
 		prevDamageAmountCount = __instance.damageAmounts.Count;
 		prevDamageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		foreach (var tracker in Tracker.trackers.Values) {
-			PegDamageCounter dmgtracker = tracker as PegDamageCounter;
-			if (dmgtracker != null)
+			if (tracker is PegDamageCounter dmgtracker)
 				dmgtracker.StartAddPeg();
 		}
 	}
@@ -115,8 +112,7 @@ public class Hooks {
 		int damageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		damageBonus -= prevDamageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
-			PegDamageCounter dmgtracker = tracker as PegDamageCounter;
-			if (dmgtracker != null)
+			if (tracker is PegDamageCounter dmgtracker)
 				dmgtracker.AddPeg(damageAdded, damageBonus);
 		}
 	}
@@ -135,8 +131,7 @@ public class Hooks {
 	[HarmonyPostfix]
 	private static void Heal(float amount, float __result) {
 		foreach (var tracker in Tracker.trackers.Values) {
-			HealingCounter healtracker = tracker as HealingCounter;
-			if (healtracker != null)
+			if (tracker is HealingCounter healtracker)
 				healtracker.Heal(__result);
 		}
 	}
@@ -145,12 +140,10 @@ public class Hooks {
 	[HarmonyPrefix]
 	private static void SelfDamage(float damage) {
 		foreach (var tracker in Tracker.trackers.Values) {
-			SelfDamageCounter dmgtracker = tracker as SelfDamageCounter;
-			if (dmgtracker != null)
+			if (tracker is SelfDamageCounter dmgtracker)
 				dmgtracker.SelfDamage(damage);
 			// This relic can't be both PegDamageCounter and SelfDamageCounter...
-			WandOfSkulltimateWrath wand = tracker as WandOfSkulltimateWrath;
-			if (wand != null)
+			if (tracker is WandOfSkulltimateWrath wand)
 				wand.SelfDamage(damage);
 		}
 	}
@@ -176,12 +169,10 @@ public class Hooks {
 		if (!__result)
 			return;
 		foreach (var tracker in Tracker.trackers.Values) {
-			DamageTargetedCounter dmgtracker = tracker as DamageTargetedCounter;
-			if (dmgtracker != null)
+			if (tracker is DamageTargetedCounter dmgtracker)
 				dmgtracker.Damage(damage);
 			// This relic can't be both HealingConter and DamageTargetedCounter...
-			InfernalIngot ingot = tracker as InfernalIngot;
-			if (ingot != null)
+			if (tracker is InfernalIngot ingot)
 				ingot.Damage(damage);
 		}
 	}
@@ -227,6 +218,34 @@ public class Hooks {
 			if (mousecomponent == null || selectcomponent == null)
 				__instance.SetupTooltipEventsRelic();
 		}
+	}
+
+	[HarmonyPatch(typeof(Battle.PegManager), "InitializePegs")]
+	[HarmonyPostfix]
+	private static void NewBattle() {
+		((SlimySalve)Tracker.trackers[Relics.RelicEffect.APPLIES_HEALING_SLIME]).NewBattle();
+		((GloriousSuffeRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_BUFF]).NewBattle();
+		((EndlessDevouRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_DEBUFF]).NewBattle();
+		foreach (Tracker tracker in Tracker.trackers.Values)
+			if (tracker is PegBuffDamageCounter dmgtracker)
+				dmgtracker.NewBattle();
+	}
+
+	[HarmonyPatch(typeof(Peg), "CheckForRelicBuff")]
+	[HarmonyPrefix]
+	private static void RelicBuff(Peg __instance) {
+		((GloriousSuffeRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_BUFF]).HandleRelicBuff(__instance);
+		((EndlessDevouRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_DEBUFF]).HandleRelicBuff(__instance);
+	}
+
+	[HarmonyPatch(typeof(BattleController), "HandlePegActivated")]
+	[HarmonyPrefix]
+	private static void HitPeg(Peg peg) {
+		((GloriousSuffeRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_BUFF]).HandleHitPeg(peg);
+		((EndlessDevouRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_DEBUFF]).HandleHitPeg(peg);
+		foreach (Tracker tracker in Tracker.trackers.Values)
+			if (tracker is PegBuffDamageCounter dmgtracker)
+				dmgtracker.HandleHitPeg(peg);
 	}
 }
 
