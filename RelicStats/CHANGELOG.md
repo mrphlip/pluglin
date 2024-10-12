@@ -1,3 +1,6 @@
+# 0.2.0
+* Fix a bug with Spheridae's Fate that was causing slowdown
+
 # 0.1.0
 * Initial public release
 * Keeps stats for how effective your relics are

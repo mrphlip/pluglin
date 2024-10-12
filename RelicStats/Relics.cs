@@ -1495,7 +1495,7 @@ public class SpheridaesFate : PegDamageCounter {
 	[HarmonyPatch(typeof(RegularPeg), "DoPegCollision")]
 	[HarmonyPrefix]
 	private static void Enable(PachinkoBall pachinko) {
-		if (pachinko.name.Contains("Squirrelball")) {
+		if (pachinko != null && pachinko.name.Contains("Squirrelball")) {
 			SpheridaesFate t = (SpheridaesFate)Tracker.trackers[Relics.RelicEffect.CREATE_SQUIRRELS_ON_PEGS_HIT];
 			t._active = true;
 		}
