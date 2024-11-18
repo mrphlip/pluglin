@@ -192,7 +192,9 @@ public class Hooks {
 	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
 	[HarmonyPrefix]
 	private static void SetupRelicsPre() {
-		_buildingRunSummary = true;
+		// Only apply tooltips to the post-run summary, and not to the Encirclepedia history section
+		if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "RunSummary")
+			_buildingRunSummary = true;
 	}
 	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
 	[HarmonyPostfix]
