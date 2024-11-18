@@ -348,7 +348,7 @@ public abstract class DamageAllCounter : SimpleCounter {
 	public override void Used() {
 		_active = true;
 	}
-	private void DamageAllEnemies(float damageAmount) {
+	private void DamageAllEnemies(float damageAmount, Battle.Enemies.Enemy.EnemyDamageSource source = 0) {
 		if (_active) {
 			count += Utils.EnemyDamageCount() * (int)damageAmount;
 			Updated();
