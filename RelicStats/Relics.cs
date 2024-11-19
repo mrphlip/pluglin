@@ -166,7 +166,7 @@ public class Recombombulator : SimpleCounter {
 		Recombombulator t = (Recombombulator)Tracker.trackers[Relics.RelicEffect.BOMBS_RESPAWN];
 		t._active = false;
 	}
-	public override string Tooltip => $"{count} <sprite name=\"BOMB\"> refreshed";
+	public override string Tooltip => $"{count} <sprite name=\"BOMB_REGULAR\"> refreshed";
 }
 
 public class ShortFuse : SimpleCounter {
