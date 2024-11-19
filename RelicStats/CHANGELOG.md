@@ -1,3 +1,14 @@
+# 1.0.0
+* Bumping version number up to full-release status, now that the mod has been tested by players other than myself.
+* Updated for Peglin 1.0.6
+	* Added stats for new relic Parallel Boomiverse
+	* Added new relic Safety Pegulations to the "changes projectile behaviour" too-hard basket
+	* Updated stats tracking for Orbert's Story for its modified behaviour
+	* Updated tooltip for Recombombulator to show a regular black bomb icon
+	* Hero's Backpack, Perfected Reactant and Perfect Forger did not require changes to work with the new version
+	* Constricting Chains, Heavy Hand, Haglin's Satchel and Molten Gold do not have stat trackers to update
+* Fixed a bug that was making the run summary relic tooltips also show up in the Encirclepedia run history section.
+
 # 0.2.0
 * Fix a bug with Spheridae's Fate that was causing slowdown
 * Add stats for:

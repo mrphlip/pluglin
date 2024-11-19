@@ -1,7 +1,7 @@
 {
   "name": "Relic_Stats",
   "description": "Show usage stats on acquired relics",
-  "version_number": "0.2.0",
+  "version_number": "1.0.0",
   "dependencies": [
     "BepInEx-BepInExPack_Peglin-5.4.2100"
   ],
