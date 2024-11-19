@@ -1301,38 +1301,17 @@ public class StartWithBallwark : StatusEffectCounter {
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballwark;
 }
 
-[HarmonyPatch]
 public class OrbertsStory : Tracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MORE_TREASURE_NODES;
 	private int treasureCount = 0, rareCount = 0;
 	public override void Reset() { treasureCount = rareCount = 0; }
-	public override void Used() {}
-	[HarmonyPatch(typeof(Map.MapController), "GetRandomScenario")]
-	[HarmonyPrefix]
-	private static void GetScenario(Map.SeededUnknownNodeData seededUnknownNodeData) {
-		if (!Tracker.HaveRelic(Relics.RelicEffect.MORE_TREASURE_NODES))
-			return;
-		if (seededUnknownNodeData.typeRoll >= 0.05f && seededUnknownNodeData.typeRoll < 0.12f) {
-			OrbertsStory t = (OrbertsStory)Tracker.trackers[Relics.RelicEffect.MORE_TREASURE_NODES];
-			t.treasureCount++;
-			t.Updated();
-		}
+	public override void Used() {
+		treasureCount++;
+		Updated();
 	}
-	[HarmonyPatch(typeof(Scenarios.ChestScenarioController), "OpenChest")]
-	[HarmonyPrefix]
-	private static void OpenChest(Scenarios.ChestScenarioController __instance) {
-		if (!Tracker.HaveRelic(Relics.RelicEffect.MORE_TREASURE_NODES))
-			return;
-		float rarechance = Relics.RelicManager.CHEST_RARE_CHANCE;
-		if (StaticGameData.dataToLoad is MapDataTreasure mapdata)
-			rarechance = mapdata.rareChance;
-		var nodedata = Refl<Map.SeededTreasureNodeData>.GetAttr(__instance, "_seededTreasureNodeData");
-		if (nodedata != null && nodedata.rareRelicChanceRoll > rarechance && nodedata.rareRelicChanceRoll <= rarechance + 0.07f)
-		{
-			OrbertsStory t = (OrbertsStory)Tracker.trackers[Relics.RelicEffect.MORE_TREASURE_NODES];
-			t.rareCount++;
-			t.Updated();
-		}
+	public override void Flash() {
+		rareCount++;
+		Updated();
 	}
 	public override object State {
 		get => (treasureCount, rareCount);

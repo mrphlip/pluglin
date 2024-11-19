@@ -15,6 +15,7 @@ public abstract class Tracker {
 public abstract string Tooltip { get; }
 	public abstract object State { get; set; }
 	public abstract void Used();
+	public virtual void Flash() {}
 	public virtual void Checked() {}
 	public void Updated() {
 		Plugin.UpdateTooltip(Relic);

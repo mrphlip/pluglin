@@ -56,6 +56,17 @@ public class Hooks {
 		}
 	}
 
+	[HarmonyPatch(typeof(Relics.RelicManager), "FlashRelic")]
+	[HarmonyPostfix]
+	static private void RelicFlashed(Relics.RelicEffect re) {
+		if (Tracker.HaveRelic(re)) {
+			Tracker tracker = null;
+			if (Tracker.trackers.TryGetValue(re, out tracker)) {
+				tracker.Flash();
+			}
+		}
+	}
+
 	[HarmonyPatch(typeof(Relics.RelicManager), "RelicEffectActive")]
 	[HarmonyPostfix]
 	static private void RelicChecked(Relics.RelicEffect re, bool __result) {
