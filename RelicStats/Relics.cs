@@ -2074,3 +2074,13 @@ public class EffectiveCriticism : Roundreloquence {
 public class HeavyHand : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ORBS_MULTIHIT_BUT_LESS_AIM;
 }
+
+public class SafetyPegulations : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.MORE_PIERCE_LESS_BOMB_DAMAGE;
+	// TODO: the relics that affect projectiles are going to be a pain
+}
+
+public class ParallelBoomiverse : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.CREATE_ADDITIONAL_BOMB;
+	public override string Tooltip => $"{count} <sprite name=\"BOMB_REGULAR\"> created";
+}
