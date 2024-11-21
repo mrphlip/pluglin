@@ -2026,10 +2026,25 @@ public class BombToDull : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"BOMB\"> dulled";
 }
 
+[HarmonyPatch]
 public class CrystalCatalyst : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MORE_SPINFECTION_DAMAGE_PER_ACT;
-	public override void Checked() => Used();
-	public override int Step => 5 * Map.MapController.instance.Act;
+	public override void Used() {}
+
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "ResolveStatusEffects")]
+	[HarmonyPrefix]
+	private static void ResolveStatusEffects(Battle.Enemies.Enemy __instance) {
+		if (Map.MapController.instance == null || !Tracker.HaveRelic(Relics.RelicEffect.MORE_SPINFECTION_DAMAGE_PER_ACT))
+			return;
+		CrystalCatalyst t = (CrystalCatalyst)Tracker.trackers[Relics.RelicEffect.MORE_SPINFECTION_DAMAGE_PER_ACT];
+		foreach (Battle.StatusEffects.StatusEffect effect in __instance.StatusEffects) {
+			if (effect.EffectType == Battle.StatusEffects.StatusEffectType.Poison) {
+				t.count += 5 * Map.MapController.instance.Act * effect.Intensity;
+				t.Updated();
+			}
+		}
+	}
+
 	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
