@@ -1,3 +1,6 @@
+# 1.0.1
+* Fix stats for Crystal Catalyst – was previously only counting "5 per act, per poisoned enemy" not "5 per act, per stack".
+
 # 1.0.0
 * Bumping version number up to full-release status, now that the mod has been tested by players other than myself.
 * Updated for Peglin 1.0.6
