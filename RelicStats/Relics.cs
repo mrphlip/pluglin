@@ -1791,18 +1791,8 @@ public class ConstrictingChains : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.AIM_LIMITER_MULTIBALL;
 }
 
-public class EndlessDevouRing : PegDamageCounter {
+public class EndlessDevouRing : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ORBS_DEBUFF;
-	public override void StartAddPeg() {
-		_active = false;
-	}
-	public override void Used() {}
-	public override void Checked() {
-		_active = true;
-	}
-	public override void AddPeg(float multiplier, int bonus) {
-		base.AddPeg(multiplier / 2f, 0);
-	}
 
 	private Dictionary<int, int> _pegBuffs = new Dictionary<int, int>();
 	private int _bonus = 0;
