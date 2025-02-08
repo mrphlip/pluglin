@@ -112,6 +112,8 @@ public class Hooks {
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is PegDamageCounter dmgtracker)
 				dmgtracker.StartAddPeg();
+			if (tracker is TenderCactus cactustracker)
+				cactustracker.StartAddPeg();
 		}
 	}
 	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
@@ -125,6 +127,8 @@ public class Hooks {
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is PegDamageCounter dmgtracker)
 				dmgtracker.AddPeg(damageAdded, damageBonus);
+			if (tracker is TenderCactus cactustracker)
+				cactustracker.AddPeg(damageAdded, damageBonus);
 		}
 	}
 	[HarmonyPatch(typeof(Battle.BattleController), "GrantAdditionalBasicPeg")]

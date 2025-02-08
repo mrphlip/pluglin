@@ -135,6 +135,11 @@ public class MatryoshkaDoll : SimpleCounter {
 			t.count += 1;
 			t.Updated();
 		}
+		if (Tracker.HaveRelic(Relics.RelicEffect.NEW_MATRYORBSHKA)) {
+			GopherGold t = ((GopherGold)Tracker.trackers[Relics.RelicEffect.NEW_MATRYORBSHKA]);
+			t.count += 1;
+			t.Updated();
+		}
 	}
 	public override string Tooltip => $"{count} orb{Utils.Plural(count)} duplicated";
 }
@@ -2102,4 +2107,107 @@ public class SafetyPegulations : TodoTracker {
 public class ParallelBoomiverse : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CREATE_ADDITIONAL_BOMB;
 	public override string Tooltip => $"{count} <sprite name=\"BOMB_REGULAR\"> created";
+}
+
+public class GopherGold : MatryoshkaDoll {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.NEW_MATRYORBSHKA;
+}
+
+public class ViridianTrinket : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.REVERSE_GRAVITY;
+}
+
+[HarmonyPatch]
+public class TenderCactus : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.DIRECT_DAMAGE;
+	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {}
+	public virtual void StartAddPeg() {
+		if (Tracker.HaveRelic(Relic))
+			_active = true;
+	}
+	public virtual void AddPeg(float multiplier, int bonus) {
+		_active = false;
+	}
+
+	[HarmonyPatch(typeof(Battle.TargetingManager), "ExternalDamageTargetedRequest")]
+	[HarmonyPrefix]
+	private static void Damage(float damage) {
+		TenderCactus t = (TenderCactus)Tracker.trackers[Relics.RelicEffect.DIRECT_DAMAGE];
+		if (t._active) {
+			t.count += (int)damage;
+			t.Updated();
+		}
+	}
+
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
+}
+
+[HarmonyPatch]
+public class StatusSymbol : OrbDamageCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_STATUS_EFFECTS;
+
+	private Battle.StatusEffects.StatusEffect _currentEffect = null;
+	public int effectCount = 0;
+	public override void Reset() {
+		base.Reset();
+		_currentEffect = null;
+		effectCount = 0;
+	}
+
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStatusEffect")]
+	[HarmonyPrefix]
+	private static void EnablePlayer(Battle.StatusEffects.StatusEffect statusEffect) {
+		if (Tracker.HaveRelic(Relics.RelicEffect.DOUBLE_STATUS_EFFECTS)) {
+			StatusSymbol t = (StatusSymbol)Tracker.trackers[Relics.RelicEffect.DOUBLE_STATUS_EFFECTS];
+			t._currentEffect = statusEffect;
+		}
+	}
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "ApplyStatusEffect")]
+	[HarmonyPostfix]
+	private static void DisablePlayer() {
+		StatusSymbol t = (StatusSymbol)Tracker.trackers[Relics.RelicEffect.DOUBLE_STATUS_EFFECTS];
+		t._currentEffect = null;
+	}
+
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "ApplyStatusEffect")]
+	[HarmonyPrefix]
+	private static void EnableEnemy(Battle.StatusEffects.StatusEffect statusEffect) {
+		if (Tracker.HaveRelic(Relics.RelicEffect.DOUBLE_STATUS_EFFECTS)) {
+			StatusSymbol t = (StatusSymbol)Tracker.trackers[Relics.RelicEffect.DOUBLE_STATUS_EFFECTS];
+			t._currentEffect = statusEffect;
+		}
+	}
+	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "ApplyStatusEffect")]
+	[HarmonyPostfix]
+	private static void DisableEnemy() {
+		StatusSymbol t = (StatusSymbol)Tracker.trackers[Relics.RelicEffect.DOUBLE_STATUS_EFFECTS];
+		t._currentEffect = null;
+	}
+
+	public override void Used() {
+		if (_currentEffect != null) {
+			effectCount += _currentEffect.Intensity;
+			Updated();
+			_currentEffect = null;
+		}
+	}
+
+	public override string Tooltip { get {
+		string tooltip = $"{badCount} <style=dmg_negative>damage removed</style>";
+		if (goodCount > 0)
+			tooltip = $"{goodCount} <style=damage>damage added</style>\n{tooltip}";
+		tooltip = $"{effectCount} buff{Utils.Plural(effectCount)} increased\n{tooltip}";
+		return tooltip;
+	}}
+	public override object State {
+		get => (goodCount, badCount, effectCount);
+		set {
+			(goodCount, badCount, effectCount) = ((int, int, int))value;
+		}
+	}
 }
