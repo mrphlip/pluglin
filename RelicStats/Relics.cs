@@ -720,9 +720,9 @@ public class EyeOfTurtle : Tracker {
 	}
 	[HarmonyPatch(typeof(PeglinUI.PostBattle.BattleUpgradeCanvas), "SetupRelicGrant")]
 	[HarmonyPrefix]
-	private static void EnableRelic(bool isTreasure) {
+	private static void EnableRelic() {
 		EyeOfTurtle t = (EyeOfTurtle)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_ORB_RELIC_OPTIONS];
-		t._relicActive = !isTreasure;
+		t._relicActive = true;
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
 		t2._relicActive = true;
 	}
