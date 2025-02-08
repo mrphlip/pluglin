@@ -111,6 +111,7 @@ public abstract string Tooltip { get; }
 					try {
 						tracker.State = item.Value;
 					} catch (InvalidCastException) {
+					} catch(NullReferenceException) {
 					}
 				}
 			}
