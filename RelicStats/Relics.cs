@@ -547,7 +547,7 @@ public class InfernalIngot : HealingCounter {
 		}
 		_damageActive = false;
 	}
-	public override string Tooltip => $"{damageCount} <style=damage>damage dealt</style>; {base.Tooltip}";
+	public override string Tooltip => $"{damageCount} <style=damage>damage dealt</style>\n{base.Tooltip}";
 	public override object State {
 		get => (count, damageCount);
 		set {
@@ -732,7 +732,7 @@ public class EyeOfTurtle : Tracker {
 		Peglintuition t2 = (Peglintuition)Tracker.trackers[Relics.RelicEffect.ADDITIONAL_PEGLIN_CHOICES];
 		t2._relicActive = false;
 	}
-	public override string Tooltip => $"{orbCount} extra orb{Utils.Plural(orbCount)}; {relicCount} extra relic{Utils.Plural(relicCount)}";
+	public override string Tooltip => $"{orbCount} extra orb{Utils.Plural(orbCount)}\n{relicCount} extra relic{Utils.Plural(relicCount)}";
 	public override object State {
 		get => (orbCount, relicCount);
 		set {
@@ -993,7 +993,7 @@ public class RefresherCourse : Tracker {
 			(musCount, spinCount) = ((int, int))value;
 		}
 	}
-	public override string Tooltip => $"{musCount} <style=strength>Muscircle added</style>; {spinCount} <style=finesse>Spinesse added</style>";
+	public override string Tooltip => $"{musCount} <style=strength>Muscircle added</style>\n{spinCount} <style=finesse>Spinesse added</style>";
 }
 
 public class HerosBackpack : OrbDamageCounter {
@@ -1283,7 +1283,7 @@ public class BranchOfEmber : Tracker {
 			(blindCount, brambleCount) = ((int, int))value;
 		}
 	}
-	public override string Tooltip => $"{blindCount} <style=blind>Blind applied</style>; {brambleCount} <style=bramble>Bramble applied</style>";
+	public override string Tooltip => $"{blindCount} <style=blind>Blind applied</style>\n{brambleCount} <style=bramble>Bramble applied</style>";
 }
 
 public class RipostalService : SimpleCounter {
@@ -1329,7 +1329,7 @@ public class OrbertsStory : Tracker {
 			(treasureCount, rareCount) = ((int, int))value;
 		}
 	}
-	public override string Tooltip => $"{treasureCount} extra treasure{Utils.Plural(treasureCount)}; {rareCount} extra rare relic{Utils.Plural(rareCount)}";
+	public override string Tooltip => $"{treasureCount} extra treasure{Utils.Plural(treasureCount)}\n{rareCount} extra rare relic{Utils.Plural(rareCount)}";
 }
 
 [HarmonyPatch]
@@ -1436,7 +1436,7 @@ public class Roundreloquence : Tracker {
 			(brambleCount, poisonCount, blindCount, exploitCount, transpCount) = ((int, int, int, int, int))value;
 		}
 	}
-	public override string Tooltip => $"{brambleCount} <style=bramble>Bramble</style>; {poisonCount} <style=poison>Spinfection</style>; {blindCount} <style=blind>Blind</style>; {exploitCount} <style=exploitaball>Exploitaball</style>; {transpCount} <style=transpherency>Transpherency</style>";
+	public override string Tooltip => $"{brambleCount} <style=bramble>Bramble</style>\n{poisonCount} <style=poison>Spinfection</style>\n{blindCount} <style=blind>Blind</style>\n{exploitCount} <style=exploitaball>Exploitaball</style>\n{transpCount} <style=transpherency>Transpherency</style>";
 }
 
 public class MaskOfSorrow : SimpleCounter {

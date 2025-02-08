@@ -64,7 +64,11 @@ public class Plugin : BaseUnityPlugin {
 		if (String.IsNullOrEmpty(tooltip)) {
 			_activeTooltip.descriptionText.text = _baseTooltip;
 		} else {
-			_activeTooltip.descriptionText.text = $"{_baseTooltip}\n<sprite name=\"BULLET\"><indent=8%>{tooltip}</indent>";
+			string[] lines = tooltip.Split('\n');
+			for (int i = 0; i < lines.Length; i++)
+				lines[i] = $"<sprite name=\"BULLET\"><indent=8%>{lines[i]}</indent>";
+			tooltip = string.Join('\n', lines);
+			_activeTooltip.descriptionText.text = $"{_baseTooltip}\n{tooltip}";
 		}
 	}
 }

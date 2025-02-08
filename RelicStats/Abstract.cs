@@ -210,7 +210,7 @@ public abstract class DamageCounter : Tracker {
 	public override string Tooltip { get {
 		string tooltip = $"{goodCount} <style=damage>damage added</style>";
 		if (badCount > 0)
-			tooltip = $"{tooltip}; {badCount} <style=dmg_negative>damage removed</style>";
+			tooltip = $"{tooltip}\n{badCount} <style=dmg_negative>damage removed</style>";
 		return tooltip;
 	}}
 
