@@ -1,3 +1,19 @@
+# 1.1.0
+* Update for Peglin 1.1.0
+* New relics added:
+	* Pincer Maneuver in the affects-projectiles too-hard bucket
+	* Gopher Gold counts how many orbs have been granted Multiball, like Matryoshka Shell
+	* Tender Cactus counts how much damage has been dealt
+	* Status Symbol counts status effects doubled, and damage lost due to debuff
+	* No obvious stats to count for Viridian Trinket
+* Existing relics changed:
+	* Skulltimate Wrath and Endless DevouRing updated for new behaviour
+	* Consuming Chalice now counts spinesse stacks added
+	* Strange Brew counts all three additional peg hits
+	* Eye of Turtle removed a no-longer-needed workaround for a bug fixed in 1.1.0
+* No change needed for: Pocketwatch, Dungeon Die, Parallel Boomiverse, Bag of Orange Pegs, Is Dis Your Card, Subtraction Reaction, Super Boots, Alien's Rock
+* No stats to change for: Constricting Chains, Matryoshka Shell, Heavy Hand, Beleaguered Boots, Wand of Skulltimate Greed
+
 # 1.0.1
 * Fix stats for Crystal Catalyst – was previously only counting "5 per act, per poisoned enemy" not "5 per act, per stack".
 
