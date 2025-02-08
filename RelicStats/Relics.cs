@@ -175,13 +175,15 @@ public class ShortFuse : SimpleCounter {
 }
 
 [HarmonyPatch]
-public class StrangeBrew : PegDamageCounter {
+public class StrangeBrew : PegMultiDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.POTION_PEGS_COUNT;
 	[HarmonyPatch(typeof(Battle.BattleController), "HandlePegActivated")]
 	[HarmonyPrefix]
-	private static void Disable() {
-		StrangeBrew t = (StrangeBrew)Tracker.trackers[Relics.RelicEffect.POTION_PEGS_COUNT];
-		t._active = false;
+	private static void Disable(Peg.PegType type) {
+		if (type == Peg.PegType.RESET || type == Peg.PegType.CRIT) {
+			StrangeBrew t = (StrangeBrew)Tracker.trackers[Relics.RelicEffect.POTION_PEGS_COUNT];
+			t._active = false;
+		}
 	}
 }
 

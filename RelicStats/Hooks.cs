@@ -138,6 +138,15 @@ public class Hooks {
 		AddPegPost(__instance);
 	}
 
+	[HarmonyPatch(typeof(Battle.BattleController), "HandlePegMultihit")]
+	[HarmonyPrefix]
+	private static void HandlePegMultihit(Peg peg, int multihitLevel) {
+		foreach (var tracker in Tracker.trackers.Values) {
+			if (tracker is PegMultiDamageCounter dmgtracker)
+				dmgtracker.MultiPeg(peg.damageMultiplier, (int)(peg.buffAmount * peg.buffDamageMultiplier), multihitLevel);
+		}
+	}
+
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "Heal")]
 	[HarmonyPostfix]
 	private static void Heal(float amount, float __result) {

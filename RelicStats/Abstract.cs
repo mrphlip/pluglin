@@ -232,8 +232,8 @@ public abstract class DamageCounter : Tracker {
 public abstract class PegDamageCounter : DamageCounter {
 	public virtual int Step => 1;
 	protected bool _active = false;
-	private float _peg_count = 0;
-	private int _bonus_count = 0;
+	protected float _peg_count = 0;
+	protected int _bonus_count = 0;
 	public override void Reset() {
 		base.Reset();
 		_active = false;
@@ -256,6 +256,16 @@ public abstract class PegDamageCounter : DamageCounter {
 		float baseDamage = attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus - _bonus_count, critCount, false);
 		_peg_count = _bonus_count = 0;
 		return baseDamage;
+	}
+}
+public abstract class PegMultiDamageCounter : PegDamageCounter {
+	public override void AddPeg(float multiplier, int bonus) {}
+	public virtual void MultiPeg(float multiplier, int bonus, int hitCount) {
+		if (_active) {
+			_peg_count += multiplier * hitCount;
+			_bonus_count += bonus * hitCount;
+		}
+		_active = false;
 	}
 }
 public abstract class OrbDamageCounter : DamageCounter {
