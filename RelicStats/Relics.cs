@@ -891,8 +891,9 @@ public class ShrewdScales : StatusEffectCounter {
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Balance;
 }
 
-public class ConsumingChalice : OrbDamageCounter {
+public class ConsumingChalice : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REDUCE_REFRESH;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Finesse;
 }
 
 public class UnpretentiousPendant : OrbDamageCounter {
