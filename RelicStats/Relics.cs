@@ -596,26 +596,29 @@ public class WeaponizedEnvy : DamageTargetedCounter {
 }
 
 [HarmonyPatch]
-public class WandOfSkulltimateWrath : PegDamageCounter {
+public class WandOfSkulltimateWrath : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG;
-	public override void StartAddPeg() {
-		_active = false;
-	}
-	public override void Used() {}
-	public override void Checked() {
-		_active = true;
-	}
-	public override void AddPeg(float multiplier, int bonus) {
-		base.AddPeg(multiplier / 2f, 0);
-	}
 
+	private int bombDamage = 0;
 	private bool _selfDamageActive = false;
 	private int selfDamageCount = 0;
 	public override void Reset() {
 		base.Reset();
 		_selfDamageActive = false;
 		selfDamageCount = 0;
+		bombDamage = 0;
 	}
+
+	[HarmonyPatch(typeof(Battle.BattleController), "GetBombDamage")]
+	[HarmonyPostfix]
+	private static void BombDamage(float __result) {
+		if (Tracker.HaveRelic(Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG)) {
+			WandOfSkulltimateWrath t = (WandOfSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
+			t.bombDamage += (int)(Utils.EnemyDamageCount() * __result / 2);
+			t.Updated();
+		}
+	}
+
 	[HarmonyPatch(typeof(Battle.PlayerHealthController), "HandlePegActivated")]
 	[HarmonyPrefix]
 	private static void Enable() {
@@ -635,11 +638,18 @@ public class WandOfSkulltimateWrath : PegDamageCounter {
 		}
 		_selfDamageActive = false;
 	}
-	public override string Tooltip => $"{base.Tooltip}; {selfDamageCount} <style=damage>self-damage</style>";
+
+	public override string Tooltip => $"{base.Tooltip}\n{bombDamage} <sprite name=\"BOMB\"> <style=damage>damage added</style>\n{selfDamageCount} <style=damage>self-damage</style>";
 	public override object State {
-		get => (goodCount, badCount, selfDamageCount);
+		get => (goodCount, badCount, selfDamageCount, bombDamage);
 		set {
-			(goodCount, badCount, selfDamageCount) = ((int, int, int))value;
+			try {
+				(goodCount, badCount, selfDamageCount, bombDamage) = ((int, int, int, int))value;
+			} catch (InvalidCastException) {
+				// handle save data from previous version
+				(goodCount, badCount, selfDamageCount) = ((int, int, int))value;
+				bombDamage = 0;
+			}
 		}
 	}
 }
@@ -1580,9 +1590,9 @@ public class AliensRock : SimpleCounter {
 	public override void Used() {}
 	[HarmonyPatch(typeof(EnemyManager), "GetSplashRangeEnemies")]
 	[HarmonyPostfix]
-	private static void GetEnemies(Battle.Enemies.Enemy enemy, int range, Battle.Attacks.AoeAttack.AoeType aoeType, EnemyManager.SlotType slotType, Battle.Enemies.Enemy[] __result) {
+	private static void GetEnemies(Battle.Enemies.Enemy targetEnemy, int range, Battle.Attacks.AoeAttack.AoeType aoeType, EnemyManager.SlotType slotType, Battle.Enemies.Enemy[] __result) {
 		if (_active) {
-			_lastEnemy = enemy;
+			_lastEnemy = targetEnemy;
 			_lastRange = range;
 			_lastType = aoeType;
 			_lastSlot = slotType;
@@ -2016,8 +2026,9 @@ public class CallOfTheVoid : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"PEG\"> destroyed";
 }
 
-public class ReverseProjectile : NoopTracker {
+public class PincerManeuver : TodoTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REVERSE_PROJECTILE_ATTACK;
+	// TODO: the relics that affect projectiles are going to be a pain
 }
 
 public class BombToDull : SimpleCounter {
