@@ -127,7 +127,7 @@ public class Refillibuster : DamageAllCounter {
 public class MatryoshkaDoll : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MATRYOSHKA;
 	public override void Used() {}
-	[HarmonyPatch(typeof(BattleController), "ArmBallForShot")]
+	[HarmonyPatch(typeof(Battle.BattleController), "ArmBallForShot")]
 	[HarmonyPostfix]
 	private static void ArmOrb() {
 		if (Tracker.HaveRelic(Relics.RelicEffect.MATRYOSHKA)) {
@@ -177,7 +177,7 @@ public class ShortFuse : SimpleCounter {
 [HarmonyPatch]
 public class StrangeBrew : PegDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.POTION_PEGS_COUNT;
-	[HarmonyPatch(typeof(BattleController), "HandlePegActivated")]
+	[HarmonyPatch(typeof(Battle.BattleController), "HandlePegActivated")]
 	[HarmonyPrefix]
 	private static void Disable() {
 		StrangeBrew t = (StrangeBrew)Tracker.trackers[Relics.RelicEffect.POTION_PEGS_COUNT];
@@ -236,14 +236,14 @@ public class PowerGlove : OrbDamageCounter {
 
 public class Ambidexionary : SimpleCounter {
 	public Ambidexionary() {
-		BattleController.OnOrbDiscarded += this.OrbDiscarded;
+		Battle.BattleController.OnOrbDiscarded += this.OrbDiscarded;
 	}
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_DISCARD;
 	public override void Used() {}
 	public void OrbDiscarded() {
 		if (!Tracker.HaveRelic(Relic))
 			return;
-		BattleController battleController = Utils.GetResource<BattleController>();
+		Battle.BattleController battleController = Utils.GetResource<Battle.BattleController>();
 		if (battleController.NumShotsDiscarded == battleController.MaxDiscardedShots) {
 			count += 1;
 			Updated();
@@ -307,13 +307,13 @@ public class SealedConviction : SimpleCounter {
 		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
 		t._active = false;
 	}
-	[HarmonyPatch(typeof(BattleController), "ShuffleDeck")]
+	[HarmonyPatch(typeof(Battle.BattleController), "ShuffleDeck")]
 	[HarmonyPrefix]
 	private static void ReloadPre() {
 		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
 		t._active = true;
 	}
-	[HarmonyPatch(typeof(BattleController), "ShuffleDeck")]
+	[HarmonyPatch(typeof(Battle.BattleController), "ShuffleDeck")]
 	[HarmonyPostfix]
 	private static void ReloadPost() {
 		SealedConviction t = (SealedConviction)Tracker.trackers[Relics.RelicEffect.NO_DISCARD];
@@ -788,12 +788,12 @@ public class PowderCollector : SimpleCounter {
 [HarmonyPatch]
 public class BadCheese : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_ENEMIES_ON_RELOAD;
-	[HarmonyPatch(typeof(BattleController), "DealCheeseDamage")]
+	[HarmonyPatch(typeof(Battle.BattleController), "DealCheeseDamage")]
 	[HarmonyPrefix]
 	private static void Enable() {
 		((BadCheese)Tracker.trackers[Relics.RelicEffect.DAMAGE_ENEMIES_ON_RELOAD])._active = true;
 	}
-	[HarmonyPatch(typeof(BattleController), "DealCheeseDamage")]
+	[HarmonyPatch(typeof(Battle.BattleController), "DealCheeseDamage")]
 	[HarmonyPostfix]
 	private static void Disable() {
 		((BadCheese)Tracker.trackers[Relics.RelicEffect.DAMAGE_ENEMIES_ON_RELOAD])._active = false;
@@ -919,7 +919,7 @@ public class PumpkinPi : SimpleCounter {
 		if (!Tracker.HaveRelic(Relics.RelicEffect.SLOT_PORTAL))
 			return;
 		PachinkoBall component = collision.GetComponent<PachinkoBall>();
-		if (component != null && BattleController.AwaitingShotCompletion() && Refl<bool>.GetAttr(__instance, "_isPortal") && Refl<int>.GetAttr(__instance, "_portalUsageCount") < 3) {
+		if (component != null && Battle.BattleController.AwaitingShotCompletion() && Refl<bool>.GetAttr(__instance, "_isPortal") && Refl<int>.GetAttr(__instance, "_portalUsageCount") < 3) {
 			PumpkinPi t = (PumpkinPi)Tracker.trackers[Relics.RelicEffect.SLOT_PORTAL];
 			t.count++;
 			t.Updated();
@@ -1006,13 +1006,13 @@ public class AxeMeAnything : SimpleCounter {
 		_bombActive = false;
 		_damageMod = 0f;
 	}
-	[HarmonyPatch(typeof(BattleController), "OnBombDeath")]
+	[HarmonyPatch(typeof(Battle.BattleController), "OnBombDeath")]
 	[HarmonyPrefix]
 	private static void EnableBomb() {
 		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
 		t._bombActive = true;
 	}
-	[HarmonyPatch(typeof(BattleController), "OnBombDeath")]
+	[HarmonyPatch(typeof(Battle.BattleController), "OnBombDeath")]
 	[HarmonyPostfix]
 	private static void DisableBomb() {
 		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
@@ -1076,7 +1076,7 @@ public class SeraphicShield : SimpleCounter {
 [HarmonyPatch]
 public class Critikris : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRIT_DAMAGES_ENEMIES;
-	[HarmonyPatch(typeof(BattleController), "ActivateCrit")]
+	[HarmonyPatch(typeof(Battle.BattleController), "ActivateCrit")]
 	[HarmonyPostfix]
 	private static void AfterActivateCrit() {
 		((Critikris)Tracker.trackers[Relics.RelicEffect.CRIT_DAMAGES_ENEMIES])._active = false;
@@ -1094,7 +1094,7 @@ public class MoltenGold : NoopTracker {
 [HarmonyPatch]
 public class MoltenMantle : DamageTargetedCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CONVERT_COIN_TO_DAMAGE;
-	[HarmonyPatch(typeof(BattleController), "HandleCoinCollected")]
+	[HarmonyPatch(typeof(Battle.BattleController), "HandleCoinCollected")]
 	[HarmonyPostfix]
 	private static void Disable() {
 		MoltenMantle t = (MoltenMantle)Tracker.trackers[Relics.RelicEffect.CONVERT_COIN_TO_DAMAGE];

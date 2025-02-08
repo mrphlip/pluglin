@@ -93,7 +93,7 @@ public class Hooks {
 		}
 	}
 
-	[HarmonyPatch(typeof(BattleController), "AddDamageMultiplier")]
+	[HarmonyPatch(typeof(Battle.BattleController), "AddDamageMultiplier")]
 	[HarmonyPostfix]
 	private static void AddDamageMultiplier(float mult) {
 		foreach (var tracker in Tracker.trackers.Values) {
@@ -104,9 +104,9 @@ public class Hooks {
 
 	private static int prevDamageAmountCount = 0;
 	private static int prevDamageBonus = 0;
-	[HarmonyPatch(typeof(BattleController), "AddPeg")]
+	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
 	[HarmonyPrefix]
-	private static void AddPegPre(BattleController __instance) {
+	private static void AddPegPre(Battle.BattleController __instance) {
 		prevDamageAmountCount = __instance.damageAmounts.Count;
 		prevDamageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		foreach (var tracker in Tracker.trackers.Values) {
@@ -114,9 +114,9 @@ public class Hooks {
 				dmgtracker.StartAddPeg();
 		}
 	}
-	[HarmonyPatch(typeof(BattleController), "AddPeg")]
+	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
 	[HarmonyPostfix]
-	private static void AddPegPost(BattleController __instance) {
+	private static void AddPegPost(Battle.BattleController __instance) {
 		float damageAdded = 0;
 		for (int i = prevDamageAmountCount; i < __instance.damageAmounts.Count; i++)
 			damageAdded += __instance.damageAmounts[i];
@@ -127,14 +127,14 @@ public class Hooks {
 				dmgtracker.AddPeg(damageAdded, damageBonus);
 		}
 	}
-	[HarmonyPatch(typeof(BattleController), "GrantAdditionalBasicPeg")]
+	[HarmonyPatch(typeof(Battle.BattleController), "GrantAdditionalBasicPeg")]
 	[HarmonyPrefix]
-	private static void GrantAdditionalBasicPegPre(BattleController __instance) {
+	private static void GrantAdditionalBasicPegPre(Battle.BattleController __instance) {
 		AddPegPre(__instance);
 	}
-	[HarmonyPatch(typeof(BattleController), "GrantAdditionalBasicPeg")]
+	[HarmonyPatch(typeof(Battle.BattleController), "GrantAdditionalBasicPeg")]
 	[HarmonyPostfix]
-	private static void GrantAdditionalBasicPegPost(BattleController __instance) {
+	private static void GrantAdditionalBasicPegPost(Battle.BattleController __instance) {
 		AddPegPost(__instance);
 	}
 
@@ -251,7 +251,7 @@ public class Hooks {
 		((EndlessDevouRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_DEBUFF]).HandleRelicBuff(__instance);
 	}
 
-	[HarmonyPatch(typeof(BattleController), "HandlePegActivated")]
+	[HarmonyPatch(typeof(Battle.BattleController), "HandlePegActivated")]
 	[HarmonyPrefix]
 	private static void HitPeg(Peg peg) {
 		((GloriousSuffeRing)Tracker.trackers[Relics.RelicEffect.ALL_ORBS_BUFF]).HandleHitPeg(peg);
