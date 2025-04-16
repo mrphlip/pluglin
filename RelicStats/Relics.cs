@@ -1850,13 +1850,13 @@ public class RefreshPerspective : PegBuffDamageCounter {
 	}
 	[HarmonyPatch(typeof(Peg), "AddBuff")]
 	[HarmonyPrefix]
-	private static void AddBuff(Peg __instance, int amount) {
+	private static void AddBuff(Peg __instance) {
 		RefreshPerspective t = (RefreshPerspective)Tracker.trackers[Relics.RelicEffect.REFRESH_UPGRADES_PEGS];
 		if (t._active) {
 			if (t._pegBuffs.ContainsKey(__instance.gameObject.GetInstanceID()))
-				t._pegBuffs[__instance.gameObject.GetInstanceID()] += amount;
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] += 1;
 			else
-				t._pegBuffs[__instance.gameObject.GetInstanceID()] = amount;
+				t._pegBuffs[__instance.gameObject.GetInstanceID()] = 1;
 		}
 		t._active = false;
 	}

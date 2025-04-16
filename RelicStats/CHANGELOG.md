@@ -3,6 +3,8 @@
 	* Please don't look up how many Peglin releases there have been since I last got around to updating this
 * Fixed Alien's Rock and Aliensrock to not overcount on enemies that died in the attack
 	* Also, updated them to work after some refactored code in the game
+* Fixed Refresh Perspective's new interaction with Necorbmancer
+	* The stats should only count the +1 from the relic and not the +5/7/9 from the orb, even though both are applied at once
 
 # 1.1.0
 * Update for Peglin 1.1.0
