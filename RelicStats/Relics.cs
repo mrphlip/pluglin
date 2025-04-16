@@ -1581,10 +1581,10 @@ public class Adventurine : PegBuffDamageCounter {
 public class AliensRock : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS;
 	private static bool _active = false;
-	private static Battle.Enemies.Enemy _lastEnemy;
+	private static int _lastSlot;
+	private static EnemyManager.SlotType _lastSlotType;
 	private static int _lastRange;
 	private static Battle.Attacks.AoeAttack.AoeType _lastType;
-	private static EnemyManager.SlotType _lastSlot;
 	private static Battle.Enemies.Enemy[] _lastResult;
 	public override void Reset() {
 		base.Reset();
@@ -1592,18 +1592,17 @@ public class AliensRock : SimpleCounter {
 	}
 	private static void ResetTemps() {
 		_active = false;
-		_lastEnemy = null;
 		_lastResult = null;
 	}
 	public override void Used() {}
 	[HarmonyPatch(typeof(EnemyManager), "GetSplashRangeEnemies")]
 	[HarmonyPostfix]
-	private static void GetEnemies(Battle.Enemies.Enemy targetEnemy, int range, Battle.Attacks.AoeAttack.AoeType aoeType, EnemyManager.SlotType slotType, Battle.Enemies.Enemy[] __result) {
+	private static void GetEnemies(int slot, EnemyManager.SlotType slotType, int range, Battle.Attacks.AoeAttack.AoeType aoeType, Battle.Enemies.Enemy[] __result) {
 		if (_active) {
-			_lastEnemy = targetEnemy;
+			_lastSlot = slot;
+			_lastSlotType = slotType;
 			_lastRange = range;
 			_lastType = aoeType;
-			_lastSlot = slotType;
 			_lastResult = __result;
 		}
 	}
@@ -1619,7 +1618,7 @@ public class AliensRock : SimpleCounter {
 		EnemyManager enemyManager = Refl<Battle.Attacks.AttackManager>.GetAttr(__instance, "_attackManager").enemyManager;
 		float hitDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
 		if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL) || Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
-			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastEnemy, 0, _lastType, _lastSlot);
+			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastSlot, _lastSlotType, 0, _lastType);
 			if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL))
 				((OldAliensrock)Tracker.trackers[Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL]).Handle(_lastResult, notSplash, hitDamage);
 			else
@@ -1639,7 +1638,7 @@ public class AliensRock : SimpleCounter {
 		EnemyManager enemyManager = Refl<Battle.Attacks.AttackManager>.GetAttr(__instance, "_attackManager").enemyManager;
 		float hitDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
 		if (Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
-			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastEnemy, _lastRange - 1, _lastType, _lastSlot);
+			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastSlot, _lastSlotType, _lastRange - 1, _lastType);
 			((AliensRock)Tracker.trackers[Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS]).Handle(_lastResult, notSplash, hitDamage);
 		}
 		ResetTemps();
