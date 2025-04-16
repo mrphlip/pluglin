@@ -1581,67 +1581,61 @@ public class Adventurine : PegBuffDamageCounter {
 public class AliensRock : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS;
 	private static bool _active = false;
-	private static int _lastSlot;
-	private static EnemyManager.SlotType _lastSlotType;
-	private static int _lastRange;
-	private static Battle.Attacks.AoeAttack.AoeType _lastType;
-	private static Battle.Enemies.Enemy[] _lastResult;
+	private static bool _noRecursion = false;
+	private static float _currentDamage;
+	private static int _currentRange;
+	private static Battle.Attacks.AoeAttack.AoeType _currentType;
 	public override void Reset() {
 		base.Reset();
-		ResetTemps();
-	}
-	private static void ResetTemps() {
-		_active = false;
-		_lastResult = null;
+		_active = _noRecursion = false;
 	}
 	public override void Used() {}
+
 	[HarmonyPatch(typeof(EnemyManager), "GetSplashRangeEnemies")]
 	[HarmonyPostfix]
-	private static void GetEnemies(int slot, EnemyManager.SlotType slotType, int range, Battle.Attacks.AoeAttack.AoeType aoeType, Battle.Enemies.Enemy[] __result) {
-		if (_active) {
-			_lastSlot = slot;
-			_lastSlotType = slotType;
-			_lastRange = range;
-			_lastType = aoeType;
-			_lastResult = __result;
+	private static void GetEnemies(EnemyManager __instance, int slot, EnemyManager.SlotType slotType, int range, Battle.Attacks.AoeAttack.AoeType aoeType, Battle.Enemies.Enemy[] __result) {
+		if (_noRecursion) {
+			return;
 		}
-	}
-	[HarmonyPatch(typeof(TargetedAttack), "HandleSpellHit")]
-	[HarmonyPrefix]
-	private static void EnableTarget() {
-		_active = true;
-	}
-	[HarmonyPatch(typeof(TargetedAttack), "HandleSpellHit")]
-	[HarmonyPostfix]
-	private static void ProcessTarget(TargetedAttack __instance) {
-		_active = false;
-		EnemyManager enemyManager = Refl<Battle.Attacks.AttackManager>.GetAttr(__instance, "_attackManager").enemyManager;
-		float hitDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+
 		if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL) || Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
-			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastSlot, _lastSlotType, 0, _lastType);
+
+			_noRecursion = true;
+			Battle.Enemies.Enemy[] notSplash = __instance.GetSplashRangeEnemies(slot, slotType, _currentRange, _currentType);
+			_noRecursion = false;
+
 			if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL))
-				((OldAliensrock)Tracker.trackers[Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL]).Handle(_lastResult, notSplash, hitDamage);
+				((OldAliensrock)Tracker.trackers[Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL]).Handle(__result, notSplash, _currentDamage);
 			else
-				((AliensRock)Tracker.trackers[Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS]).Handle(_lastResult, notSplash, hitDamage);
+				((AliensRock)Tracker.trackers[Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS]).Handle(__result, notSplash, _currentDamage);
 		}
-		ResetTemps();
+	}
+
+	[HarmonyPatch(typeof(TargetedAttack), "HandleSpellHit")]
+	[HarmonyPrefix]
+	private static void EnableTarget(TargetedAttack __instance) {
+		_active = true;
+		_currentDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+		_currentRange = 0;
+		_currentType = Battle.Attacks.AoeAttack.AoeType.SIDE;
+	}
+	[HarmonyPatch(typeof(TargetedAttack), "HandleSpellHit")]
+	[HarmonyPostfix]
+	private static void DisableTarget(TargetedAttack __instance) {
+		_active = false;
 	}
 	[HarmonyPatch(typeof(Battle.Attacks.AoeAttack), "HandleSpellHit")]
 	[HarmonyPrefix]
-	private static void EnableAoe() {
+	private static void EnableAoe(Battle.Attacks.AoeAttack __instance) {
 		_active = true;
+		_currentDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+		_currentRange = __instance.range;
+		_currentType = __instance.aoeType;
 	}
 	[HarmonyPatch(typeof(Battle.Attacks.AoeAttack), "HandleSpellHit")]
 	[HarmonyPostfix]
-	private static void ProcessAoe(Battle.Attacks.AoeAttack __instance) {
+	private static void DisableAoe(Battle.Attacks.AoeAttack __instance) {
 		_active = false;
-		EnemyManager enemyManager = Refl<Battle.Attacks.AttackManager>.GetAttr(__instance, "_attackManager").enemyManager;
-		float hitDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
-		if (Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
-			Battle.Enemies.Enemy[] notSplash = enemyManager.GetSplashRangeEnemies(_lastSlot, _lastSlotType, _lastRange - 1, _lastType);
-			((AliensRock)Tracker.trackers[Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS]).Handle(_lastResult, notSplash, hitDamage);
-		}
-		ResetTemps();
 	}
 	private void Handle(Battle.Enemies.Enemy[] enemiesHit, Battle.Enemies.Enemy[] enemiesIgnore, float damage) {
 		int enemyCount = 0;
