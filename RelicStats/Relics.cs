@@ -1594,7 +1594,7 @@ public class AliensRock : SimpleCounter {
 	[HarmonyPatch(typeof(EnemyManager), "GetSplashRangeEnemies")]
 	[HarmonyPostfix]
 	private static void GetEnemies(EnemyManager __instance, int slot, EnemyManager.SlotType slotType, int range, Battle.Attacks.AoeAttack.AoeType aoeType, Battle.Enemies.Enemy[] __result) {
-		if (_noRecursion) {
+		if (!_active || _noRecursion) {
 			return;
 		}
 

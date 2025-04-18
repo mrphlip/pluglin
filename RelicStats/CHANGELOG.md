@@ -1,3 +1,6 @@
+# 1.2.1
+* Bugfix for Alien's Rock counting other sources of splash damage (like Sappers exploding)
+
 # 1.2.0
 * Update for Peglin 1.1.9
 	* Please don't look up how many Peglin releases there have been since I last got around to updating this
