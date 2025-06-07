@@ -6,7 +6,7 @@
 		<Product>Rarity Colour</Product>
 		<BepInExPluginGuid>com.mrphlip.peglin.RelicColour</BepInExPluginGuid>
 		<Description>Re-colours orb and relic offers to show their rarity</Description>
-		<Version>1.0</Version>
+		<Version>1.1</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 		<RestoreAdditionalProjectSources>

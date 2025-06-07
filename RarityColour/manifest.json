@@ -1,7 +1,7 @@
 {
   "name": "Rarity_Colour",
   "description": "Re-colours orb and relic offers to show their rarity",
-  "version_number": "1.0.0",
+  "version_number": "1.1.0",
   "dependencies": [
     "BepInEx-BepInExPack_Peglin-5.4.2100"
   ],

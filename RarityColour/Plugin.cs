@@ -90,8 +90,8 @@ public class Plugin : BaseUnityPlugin {
 
 		Battle.Attacks.Attack attack = orb.GetComponent<Battle.Attacks.Attack>();
 		int level= attack.Level;
-		if (attack is Battle.Attacks.AssemballAttack)
-			level = (attack as Battle.Attacks.AssemballAttack).GetAssemballDisplayLevel();
+		if (attack is Battle.Attacks.AssemballAttack assemb)
+			level = Battle.Attacks.AssemballAttack.GetAssemballDisplayLevel(assemb.GetNumberOfComponents());
 
 		return (rarity, level);
 	}
