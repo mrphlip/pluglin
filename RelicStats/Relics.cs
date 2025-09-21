@@ -1837,6 +1837,10 @@ public class IsDisYourCard : StatusEffectCounter {
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
+public class EmptyPlaceholder : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.EMPTY_PLACEHOLDER;
+}
+
 [HarmonyPatch]
 public class RefreshPerspective : PegBuffDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.REFRESH_UPGRADES_PEGS;
