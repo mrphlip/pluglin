@@ -64,6 +64,9 @@ public class Plugin : BaseUnityPlugin {
 			yield return StartCoroutine(ExtractMapData());
 		}
 
+		ExtractOrbImages();
+		ExtractRelicImages();
+
 		yield return StartCoroutine(LoadScene(0));
 	}
 
@@ -419,6 +422,97 @@ public class Plugin : BaseUnityPlugin {
 		}
 		fp.WriteLine("),");
 		// Maybe: secretTunnelConnection?
+	}
+
+	Texture2D CropTexture(Texture2D source, Rect rect, int scale=1) {
+		// from: https://discussions.unity.com/t/easy-way-to-make-texture-isreadable-true-by-script/848617/2
+		RenderTexture renderTex = RenderTexture.GetTemporary(
+			source.width * scale,
+			source.height * scale,
+			0,
+			RenderTextureFormat.Default,
+			RenderTextureReadWrite.Linear);
+
+		RenderTexture previous = RenderTexture.active;
+		//Graphics.Blit(source, renderTex, new Vector2(1.0f/scale, scale), rect.position);
+		//Graphics.Blit(source, renderTex, Vector2.one, rect.position);
+		Graphics.Blit(source, renderTex);
+		RenderTexture.active = renderTex;
+		int width = Mathf.RoundToInt(rect.width) * scale;
+		int height = Mathf.RoundToInt(rect.height) * scale;
+		float x = rect.x * scale;
+		// Sprite.textureRect measures y coordinates from the bottom up
+		// but ReadPixels measures them from the top down
+		// whyyyy
+		float y = (source.height - rect.y - rect.height) * scale;
+		Texture2D readableTex = new Texture2D(width, height);
+		readableTex.ReadPixels(new Rect(x, y, width, height), 0, 0);
+		readableTex.Apply();
+		RenderTexture.active = previous;
+		RenderTexture.ReleaseTemporary(renderTex);
+		return readableTex;
+	}
+
+	void WritePNG(string filename, Texture2D tex, Rect rect, int scale=1) {
+		Texture2D readableTex = CropTexture(tex, rect, scale);
+		File.WriteAllBytes(filename, readableTex.EncodeToPNG());
+		UnityEngine.Object.Destroy(readableTex);
+	}
+
+	void WritePNG(string filename, Sprite sprite, int scale=1) {
+		WritePNG(filename, sprite.texture, sprite.textureRect, scale);
+	}
+
+	void ExtractOrbImages() {
+		Directory.CreateDirectory($"{targetDir}/orbs");
+		var extracted = new HashSet<int>();
+		var suffix = new Dictionary<string, int>();
+		bool assemballSeen = false;
+		foreach (var orb in Resources.FindObjectsOfTypeAll<PachinkoBall>()) {
+			var sprite = orb.sprite;
+			if (orb is Battle.Pachinko.BallBehaviours.AssemballParent assemball) {
+				if (assemballSeen)
+					continue;
+				assemballSeen = true;
+				sprite = assemball.BuildSprite(Battle.Pachinko.BallBehaviours.AssemballType.ALL);
+			}	else {
+				if (extracted.Contains(sprite.GetInstanceID()))
+					continue;
+				extracted.Add(sprite.GetInstanceID());
+			}
+
+			var atk = orb.GetComponent<Battle.Attacks.Attack>();
+			string name;
+			if (atk != null && atk.Name != null && atk.Name != "")
+				name = atk.Name;
+			else
+				name = orb.name;
+			name = name.Replace(" ", "_");
+			if (suffix.ContainsKey(name)) {
+				suffix[name]++;
+				name = $"{name}__{suffix[name]}";
+			} else {
+				suffix[name] = 1;
+			}
+
+			WritePNG($"{targetDir}/orbs/{name}.png", sprite, 4);
+		}
+	}
+
+	void ExtractRelicImages() {
+		Directory.CreateDirectory($"{targetDir}/relics");
+		var relicManager = Refl<Relics.RelicManager>.GetAttr(Map.MapController.instance, "_relicManager");
+		foreach	(var relic in relicManager.globalRelics.relics) {
+			ExtractRelicImage(relic);
+		}
+		ExtractRelicImage(relicManager.consolationPrize);
+	}
+
+	void ExtractRelicImage(Relics.Relic relic) {
+		string name = relic.englishDisplayName;
+		name = name.Replace("?", "_");
+		name = name.Replace(" ", "_");
+		WritePNG($"{targetDir}/relics/{name}.png", relic.sprite, 4);
 	}
 }
 
