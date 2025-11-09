@@ -366,9 +366,9 @@ public class MonsterTraining : PegDamageCounter {
 	public override void Used() {
 		_active = true;
 	}
-	public override void AddPeg(float multiplier, int bonus) {
+	public override void AddPeg(int multiplier, int bonus) {
 		// Only half the multiplier, and none of the bonus, can be attributed to this relic
-		base.AddPeg(multiplier / 2f, 0);
+		base.AddPeg(multiplier / 2, 0);
 	}
 }
 
@@ -547,9 +547,9 @@ public class InfernalIngot : HealingCounter {
 		t._active = false;
 		t._damageActive = false;
 	}
-	public void Damage(float amount) {
+	public void Damage(int amount) {
 		if (_damageActive) {
-			damageCount += (int)amount;
+			damageCount += amount;
 			Updated();
 		}
 		_damageActive = false;
@@ -618,10 +618,10 @@ public class WandOfSkulltimateWrath : OrbDamageCounter {
 
 	[HarmonyPatch(typeof(Battle.BattleController), "GetBombDamage")]
 	[HarmonyPostfix]
-	private static void BombDamage(float __result) {
+	private static void BombDamage(int __result) {
 		if (Tracker.HaveRelic(Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG)) {
 			WandOfSkulltimateWrath t = (WandOfSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
-			t.bombDamage += (int)(Utils.EnemyDamageCount() * __result / 2);
+			t.bombDamage += Utils.EnemyDamageCount() * __result / 2;
 			t.Updated();
 		}
 	}
@@ -778,8 +778,8 @@ public class GloriousSuffeRing : OrbDamageCounter {
 		}
 	}
 
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
-		float result = base.GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus - _bonus, critCount);
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+		float result = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus - _bonus, critCount);
 		_bonus = 0;
 		return result;
 	}
@@ -962,7 +962,7 @@ public class SafetyNet : PegDamageCounter {
 		_active = true;
 		_counter = 5;
 	}
-	public override void AddPeg(float multiplier, int bonus) {
+	public override void AddPeg(int multiplier, int bonus) {
 		base.AddPeg(multiplier, bonus);
 		if (--_counter > 0)
 			_active = true;
@@ -1050,7 +1050,7 @@ public class AxeMeAnything : SimpleCounter {
 	}
 	[HarmonyPatch(typeof(Battle.Enemies.Enemy), "Damage")]
 	[HarmonyPrefix]
-	private static void EnemyDamage(Battle.Enemies.Enemy __instance, float damage, float damageMod) {
+	private static void EnemyDamage(Battle.Enemies.Enemy __instance, long damage, float damageMod) {
 		if (!Tracker.HaveRelic(Relics.RelicEffect.NO_DAMAGE_REDUCTION))
 			return;
 		AxeMeAnything t = (AxeMeAnything)Tracker.trackers[Relics.RelicEffect.NO_DAMAGE_REDUCTION];
@@ -1297,8 +1297,8 @@ public class BranchOfEmber : Tracker {
 public class RipostalService : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLWARK_COUNTER;
 	public override void Used() {}
-	public void Damage(float damage) {
-		count += (int)damage;
+	public void Damage(int damage) {
+		count += damage;
 		Updated();
 	}
 	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
@@ -1593,7 +1593,7 @@ public class AliensRock : SimpleCounter {
 
 	[HarmonyPatch(typeof(EnemyManager), "GetSplashRangeEnemies")]
 	[HarmonyPostfix]
-	private static void GetEnemies(EnemyManager __instance, int slot, EnemyManager.SlotType slotType, int range, Battle.Attacks.AoeAttack.AoeType aoeType, Battle.Enemies.Enemy[] __result) {
+	private static void GetEnemies(EnemyManager __instance, float inputSlot, EnemyManager.SlotType slotType, int range, Battle.Attacks.AoeAttack.AoeType aoeType, Battle.Enemies.Enemy[] __result) {
 		if (!_active || _noRecursion) {
 			return;
 		}
@@ -1601,7 +1601,7 @@ public class AliensRock : SimpleCounter {
 		if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL) || Tracker.HaveRelic(Relics.RelicEffect.SPLASH_EFFECT_ON_TARGETED_ATTACKS)) {
 
 			_noRecursion = true;
-			Battle.Enemies.Enemy[] notSplash = __instance.GetSplashRangeEnemies(slot, slotType, _currentRange, _currentType);
+			Battle.Enemies.Enemy[] notSplash = __instance.GetSplashRangeEnemies(inputSlot, slotType, _currentRange, _currentType);
 			_noRecursion = false;
 
 			if (Tracker.HaveRelic(Relics.RelicEffect.TARGETED_ATTACKS_HIT_ALL))
@@ -1650,10 +1650,10 @@ public class AliensRock : SimpleCounter {
 
 public class Spinventoriginality : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.UNIQUE_ORBS_BUFF;
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		bool oldApplyUniqueBuff = Refl<bool>.GetAttr(attack, "applyUniqueBuff");
 		Utils.SetAttr(attack, "applyUniqueBuff", false);
-		float res = base.GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+		float res = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
 		Utils.SetAttr(attack, "applyUniqueBuff", oldApplyUniqueBuff);
 		return res;
 	}
@@ -1820,8 +1820,8 @@ public class EndlessDevouRing : OrbDamageCounter {
 			}
 		}
 	}
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
-		float result = base.GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus - _bonus, critCount);
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+		float result = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus - _bonus, critCount);
 		_bonus = 0;
 		return result;
 	}
@@ -2127,13 +2127,13 @@ public class TenderCactus : SimpleCounter {
 		if (Tracker.HaveRelic(Relic))
 			_active = true;
 	}
-	public virtual void AddPeg(float multiplier, int bonus) {
+	public virtual void AddPeg(int multiplier, int bonus) {
 		_active = false;
 	}
 
 	[HarmonyPatch(typeof(Battle.TargetingManager), "ExternalDamageTargetedRequest")]
 	[HarmonyPrefix]
-	private static void Damage(float damage) {
+	private static void Damage(long damage) {
 		TenderCactus t = (TenderCactus)Tracker.trackers[Relics.RelicEffect.DIRECT_DAMAGE];
 		if (t._active) {
 			t.count += (int)damage;

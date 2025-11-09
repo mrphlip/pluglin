@@ -215,11 +215,11 @@ public abstract class DamageCounter : Tracker {
 		return tooltip;
 	}}
 
-	public virtual void HandleFire(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+	public virtual void HandleFire(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		if (!Tracker.HaveRelic(Relic))
 			return;
-		float fullDamage = attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
-		float baseDamage = GetBaseDamage(attack, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+		float fullDamage = attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
+		float baseDamage = GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
 		if (fullDamage > baseDamage) {
 			goodCount += (int)(fullDamage - baseDamage);
 			Updated();
@@ -228,12 +228,12 @@ public abstract class DamageCounter : Tracker {
 			Updated();
 		}
 	}
-	public abstract float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount);
+	public abstract float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount);
 }
 public abstract class PegDamageCounter : DamageCounter {
 	public virtual int Step => 1;
 	protected bool _active = false;
-	protected float _peg_count = 0;
+	protected int _peg_count = 0;
 	protected int _bonus_count = 0;
 	public override void Reset() {
 		base.Reset();
@@ -244,24 +244,22 @@ public abstract class PegDamageCounter : DamageCounter {
 		_active = true;
 	}
 	public virtual void StartAddPeg() {}
-	public virtual void AddPeg(float multiplier, int bonus) {
+	public virtual void AddPeg(int multiplier, int bonus) {
 		if (_active) {
 			_peg_count += multiplier;
 			_bonus_count += bonus;
 		}
 		_active = false;
 	}
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
-		float[] newDmgValues = new float[dmgValues.Length + 1];
-		newDmgValues = dmgValues.Append(-_peg_count).ToArray();
-		float baseDamage = attack.GetDamage(attackManager, newDmgValues, dmgMult, dmgBonus - _bonus_count, critCount, false);
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+		float baseDamage = attack.GetDamage(attackManager, pegMultipliersTally - _peg_count, dmgMult, dmgBonus - _bonus_count, critCount, false);
 		_peg_count = _bonus_count = 0;
 		return baseDamage;
 	}
 }
 public abstract class PegMultiDamageCounter : PegDamageCounter {
-	public override void AddPeg(float multiplier, int bonus) {}
-	public virtual void MultiPeg(float multiplier, int bonus, int hitCount) {
+	public override void AddPeg(int multiplier, int bonus) {}
+	public virtual void MultiPeg(int multiplier, int bonus, int hitCount) {
 		if (_active) {
 			_peg_count += multiplier * hitCount;
 			_bonus_count += bonus * hitCount;
@@ -271,12 +269,12 @@ public abstract class PegMultiDamageCounter : PegDamageCounter {
 }
 public abstract class OrbDamageCounter : DamageCounter {
 	public override void Used() {}
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
 		var owned = Refl<Dictionary<Relics.RelicEffect, Relics.Relic>>.GetAttr(relicManager, "_ownedRelics");
 		Relics.Relic r = owned[Relic];
 		owned.Remove(Relic);
-		float baseDamage = attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+		float baseDamage = attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
 		owned.Add(Relic, r);
 		return baseDamage;
 	}
@@ -297,10 +295,10 @@ public abstract class MultDamageCounter : DamageCounter {
 			_multiplier *= mult;
 		_active = false;
 	}
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		dmgMult /= _multiplier;
 		_multiplier = 1f;
-		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+		return attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
 	}
 }
 public abstract class PegBuffDamageCounter : DamageCounter {
@@ -321,10 +319,10 @@ public abstract class PegBuffDamageCounter : DamageCounter {
 			}
 		}
 	}
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		dmgBonus -= _bonus;
 		_bonus = 0;
-		return attack.GetDamage(attackManager, dmgValues, dmgMult, dmgBonus, critCount, false);
+		return attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
 	}
 }
 
@@ -337,9 +335,9 @@ public abstract class DamageTargetedCounter : SimpleCounter {
 	public override void Used() {
 		_active = true;
 	}
-	public virtual void Damage(float amount) {
+	public virtual void Damage(int amount) {
 		if (_active) {
-			count += (int)amount;
+			count += amount;
 			Updated();
 		}
 		_active = false;
@@ -360,7 +358,7 @@ public abstract class DamageAllCounter : SimpleCounter {
 	public override void Used() {
 		_active = true;
 	}
-	private void DamageAllEnemies(float damageAmount, Battle.Enemies.Enemy.EnemyDamageSource source = 0) {
+	private void DamageAllEnemies(long damageAmount, Battle.Enemies.Enemy.EnemyDamageSource source = 0) {
 		if (_active) {
 			count += Utils.EnemyDamageCount() * (int)damageAmount;
 			Updated();

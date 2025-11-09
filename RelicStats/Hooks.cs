@@ -80,16 +80,16 @@ public class Hooks {
 
 	[HarmonyPatch(typeof(TargetedAttack), "Fire")]
 	[HarmonyPrefix]
-	private static void FireTargeted(TargetedAttack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount)
-		=> HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+	private static void FireTargeted(TargetedAttack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount)
+		=> HandleFire(__instance, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
 	[HarmonyPatch(typeof(Battle.Attacks.ProjectileAttack), "Fire")]
 	[HarmonyPrefix]
-	private static void FireProjectile(Battle.Attacks.ProjectileAttack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount)
-		=> HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
-	private static void HandleFire(Battle.Attacks.Attack __instance, Battle.Attacks.AttackManager attackManager, float[] dmgValues, float dmgMult, int dmgBonus, int critCount) {
+	private static void FireProjectile(Battle.Attacks.ProjectileAttack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount)
+		=> HandleFire(__instance, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
+	private static void HandleFire(Battle.Attacks.Attack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is DamageCounter dmgtracker)
-				dmgtracker.HandleFire(__instance, attackManager, dmgValues, dmgMult, dmgBonus, critCount);
+				dmgtracker.HandleFire(__instance, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
 		}
 	}
 
@@ -102,12 +102,12 @@ public class Hooks {
 		}
 	}
 
-	private static int prevDamageAmountCount = 0;
+	private static int prevDamageAmount = 0;
 	private static int prevDamageBonus = 0;
 	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
 	[HarmonyPrefix]
 	private static void AddPegPre(Battle.BattleController __instance) {
-		prevDamageAmountCount = __instance.damageAmounts.Count;
+		prevDamageAmount = __instance.pegMultiplierDamageTally;
 		prevDamageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is PegDamageCounter dmgtracker)
@@ -119,9 +119,7 @@ public class Hooks {
 	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
 	[HarmonyPostfix]
 	private static void AddPegPost(Battle.BattleController __instance) {
-		float damageAdded = 0;
-		for (int i = prevDamageAmountCount; i < __instance.damageAmounts.Count; i++)
-			damageAdded += __instance.damageAmounts[i];
+		int damageAdded = __instance.pegMultiplierDamageTally - prevDamageAmount;
 		int damageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
 		damageBonus -= prevDamageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
@@ -189,15 +187,15 @@ public class Hooks {
 
 	[HarmonyPatch(typeof(Battle.TargetingManager), "AttemptDamageTargetedEnemy")]
 	[HarmonyPostfix]
-	private static void Damage(float damage, bool __result) {
+	private static void Damage(long damage, bool __result) {
 		if (!__result)
 			return;
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is DamageTargetedCounter dmgtracker)
-				dmgtracker.Damage(damage);
+				dmgtracker.Damage((int)damage);
 			// This relic can't be both HealingConter and DamageTargetedCounter...
 			if (tracker is InfernalIngot ingot)
-				ingot.Damage(damage);
+				ingot.Damage((int)damage);
 		}
 	}
 
@@ -577,6 +575,6 @@ public class Transpilers {
 	}
 
 	public static void BallwarkCounter(float amount) {
-		((RipostalService)Tracker.trackers[Relics.RelicEffect.BALLWARK_COUNTER]).Damage(amount);
+		((RipostalService)Tracker.trackers[Relics.RelicEffect.BALLWARK_COUNTER]).Damage((int)amount);
 	}
 }

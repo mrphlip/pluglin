@@ -36,7 +36,7 @@ public class Plugin : BaseUnityPlugin {
 	private static void OnLoadMainMenu() {
 		if (firstTime) {
 			firstTime = false;
-			inst.StartCoroutine(inst.Go());
+			UniverseLib.RuntimeHelper.StartCoroutine(inst.Go());
 		}
 	}
 
@@ -52,7 +52,7 @@ public class Plugin : BaseUnityPlugin {
 	public IEnumerator Go() {
 		yield return null;
 		using (var patcher = new Patcher()) {
-			yield return StartCoroutine(LoadScene(1));
+			yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(1));
 
 			Init();
 
@@ -61,18 +61,18 @@ public class Plugin : BaseUnityPlugin {
 			ExtractRelicData();
 			ExtractOrbData();
 			ExtractSeedData();
-			yield return StartCoroutine(ExtractMapData());
+			yield return UniverseLib.RuntimeHelper.StartCoroutine(ExtractMapData());
 		}
 
 		ExtractOrbImages();
 		ExtractRelicImages();
 
-		yield return StartCoroutine(LoadScene(0));
+		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(0));
 	}
 
 	public IEnumerator LoadMap(int act) {
 		using (var patcher = new Patcher()) {
-			yield return StartCoroutine(LoadScene(act));
+			yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(act));
 		}
 	}
 
@@ -328,7 +328,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("MapMinigame = namedtuple(\"MapMinigame\", [\"name\", \"is_orbs\", \"is_relics\", \"orb_count\", \"relic_count\", \"relic_rarity\"])");
 			fp.WriteLine("maps = [");
 			for (var i = 1; i <= 3; i++) {
-				yield return StartCoroutine(LoadMap(i));
+				yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadMap(i));
 				var map = Map.MapController.instance;
 				fp.WriteLine("  Map(");
 				fp.WriteLine($"    \"{Refl<string>.GetAttr(map, "_mapName")}\",");
