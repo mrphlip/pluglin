@@ -271,7 +271,7 @@ public abstract class OrbDamageCounter : DamageCounter {
 	public override void Used() {}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
-		var owned = Refl<Dictionary<Relics.RelicEffect, Relics.Relic>>.GetAttr(relicManager, "_ownedRelics");
+		var owned = relicManager._ownedRelics;
 		Relics.Relic r = owned[Relic];
 		owned.Remove(Relic);
 		float baseDamage = attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
@@ -398,21 +398,6 @@ public class Utils {
 			return null;
 	}
 
-	static public TFld GetAttr<TObj, TFld>(TObj obj, string field) {
-		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-		return (TFld)fld.GetValue(obj);
-	}
-
-	static public void SetAttr<TObj, TFld>(TObj obj, string field, TFld val) {
-		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-		fld.SetValue(obj, val);
-	}
-
-	static public TFld GetStaticAttr<TObj, TFld>(string field) {
-		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Static);
-		return (TFld)fld.GetValue(null);
-	}
-
 	static public string Plural(int n, string ifplural = "s", string ifsingle = "") {
 		return (n == 1) ? ifsingle : ifplural;
 	}
@@ -446,18 +431,4 @@ public class Utils {
 		Battle.StatusEffects.StatusEffectType.Transpherency => "<style=transpherency>Transpherency",
 		_ => null,
 	};
-}
-
-public class Refl<TFld> {
-	static public TFld GetAttr<TObj>(TObj obj, string field) {
-		return Utils.GetAttr<TObj, TFld>(obj, field);
-	}
-
-	static public void SetAttr<TObj>(TObj obj, string field, TFld val) {
-		Utils.SetAttr<TObj, TFld>(obj, field, val);
-	}
-
-	static public TFld GetStaticAttr<TObj>(string field) {
-		return Utils.GetStaticAttr<TObj, TFld>(field);
-	}
 }

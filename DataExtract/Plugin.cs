@@ -142,9 +142,9 @@ public class Plugin : BaseUnityPlugin {
 
 	public void ExtractClasses() {
 		using (StreamWriter fp = new StreamWriter($"{targetDir}/classes.py")) {
-			var relicManager = Refl<Relics.RelicManager>.GetAttr(Map.MapController.instance, "_relicManager");
-			var loadouts = Refl<PeglinUI.LoadoutManager.ClassLoadoutPairs[]>.GetAttr(relicManager, "_classLoadouts");
-			var deckManager = Refl<DeckManager>.GetAttr(Map.MapController.instance, "_deckManager");
+			var relicManager = Map.MapController.instance._relicManager;
+			var loadouts = relicManager._classLoadouts;
+			var deckManager = Map.MapController.instance._deckManager;
 
 			fp.WriteLine("from collections import namedtuple");
 			fp.WriteLine("from .enums import Class, RelicRarity, OrbRarity");
@@ -224,7 +224,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("__all__ = [\"relics\"]");
 			fp.WriteLine("");
 
-			var relicManager = Refl<Relics.RelicManager>.GetAttr(Map.MapController.instance, "_relicManager");
+			var relicManager = Map.MapController.instance._relicManager;
 
 			fp.WriteLine("Relic = namedtuple(\"Relic\", [\"key\", \"name\", \"effect\", \"rarity\"])");
 			fp.WriteLine("relics = {");
@@ -249,7 +249,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("__all__ = [\"orbs\"]");
 			fp.WriteLine("");
 
-			var deckManager = Refl<DeckManager>.GetAttr(Map.MapController.instance, "_deckManager");
+			var deckManager = Map.MapController.instance._deckManager;
 
 			fp.WriteLine("Orb = namedtuple(\"Orb\", [\"key\", \"name\", \"rarity\"])");
 			fp.WriteLine("orbs = {\n");
@@ -269,7 +269,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("__all__ = [\"secret_seeds\"]");
 			fp.WriteLine("");
 
-			var seedManager = Refl<SecretSeedManager>.GetAttr(Map.MapController.instance, "_secretSeedManager");
+			var seedManager = Map.MapController.instance._secretSeedManager;
 
 			fp.WriteLine("SecretSeed = namedtuple(\"SecretSeed\", [\"name\", \"seed\", \"relics\", \"pools\", \"map\"])");
 			fp.WriteLine("SecretSeedPools = namedtuple(\"SecretSeedPools\", [\"orbs\", \"common\", \"uncommon\", \"rare\", \"other\", \"relics\", \"relic_fallback\"])");
@@ -331,33 +331,33 @@ public class Plugin : BaseUnityPlugin {
 				yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadMap(i));
 				var map = Map.MapController.instance;
 				fp.WriteLine("  Map(");
-				fp.WriteLine($"    \"{Refl<string>.GetAttr(map, "_mapName")}\",");
+				fp.WriteLine($"    \"{map._mapName}\",");
 				fp.WriteLine("    [");
-				foreach (var battle in Refl<List<Data.MapDataBattle>>.GetAttr(map, "_potentialEasyBattles"))
+				foreach (var battle in map._potentialEasyBattles)
 					ExtractBattle(fp, battle, "  ", false);
 				fp.WriteLine("    ],");
 				fp.WriteLine("    [");
-				foreach (var battle in Refl<List<Data.MapDataBattle>>.GetAttr(map, "_potentialRandomBattles"))
+				foreach (var battle in map._potentialRandomBattles)
 					ExtractBattle(fp, battle, "  ", false);
 				fp.WriteLine("    ],");
 				fp.WriteLine("    [");
-				foreach (var battle in Refl<List<Data.MapDataBattle>>.GetAttr(map, "_potentialEliteBattles"))
+				foreach (var battle in map._potentialEliteBattles)
 					ExtractBattle(fp, battle, "  ", false);
 				fp.WriteLine("    ],");
-				ExtractBattle(fp, Refl<Data.MapDataBattle>.GetAttr(map, "_mimicBatteData"), "", true);
+				ExtractBattle(fp, map._mimicBatteData, "", true);
 				fp.WriteLine("    [");
-				foreach (var scenario in Refl<List<Data.Scenarios.MapDataScenario>>.GetAttr(map, "_potentialRandomScenarios"))
+				foreach (var scenario in map._potentialRandomScenarios)
 					ExtractScenario(fp, scenario, "");
 				fp.WriteLine("    ],");
 				fp.WriteLine("    [");
-				foreach (var minigame in Refl<List<MapDataPegMinigame>>.GetAttr(map, "_potentialPegMinigameScenarios"))
+				foreach (var minigame in map._potentialPegMinigameScenarios)
 					ExtractMinigame(fp, minigame);
 				fp.WriteLine("    ],");
 				fp.WriteLine("    {");
-				foreach (var node in Refl<Worldmap.MapNode[]>.GetAttr(map, "_nodes"))
+				foreach (var node in map._nodes)
 					ExtractNode(fp, node);
 				fp.WriteLine("    },");
-				fp.WriteLine($"    {Refl<MapDataTreasure>.GetAttr(map, "_treasureMapData").rareChance},");
+				fp.WriteLine($"    {map._treasureMapData.rareChance},");
 				fp.WriteLine($"    {map.minEliteNodes},");
 				fp.WriteLine($"    {map.minTreasureNodes},");
 				fp.WriteLine($"    {map.minShopNodes},");
@@ -501,7 +501,7 @@ public class Plugin : BaseUnityPlugin {
 
 	void ExtractRelicImages() {
 		Directory.CreateDirectory($"{targetDir}/relics");
-		var relicManager = Refl<Relics.RelicManager>.GetAttr(Map.MapController.instance, "_relicManager");
+		var relicManager = Map.MapController.instance._relicManager;
 		foreach	(var relic in relicManager.globalRelics.relics) {
 			ExtractRelicImage(relic);
 		}
@@ -531,27 +531,5 @@ public class Patcher : IDisposable {
 
 	public static bool PatchDoNothing() {
 		return false;
-	}
-}
-
-public class Utils {
-	static public TFld GetAttr<TObj, TFld>(TObj obj, string field) {
-		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-		return (TFld)fld.GetValue(obj);
-	}
-
-	static public TFld GetStaticAttr<TObj, TFld>(string field) {
-		var fld = typeof(TObj).GetField(field, BindingFlags.NonPublic | BindingFlags.Static);
-		return (TFld)fld.GetValue(null);
-	}
-}
-
-public class Refl<TFld> {
-	static public TFld GetAttr<TObj>(TObj obj, string field) {
-		return Utils.GetAttr<TObj, TFld>(obj, field);
-	}
-
-	static public TFld GetStaticAttr<TObj>(string field) {
-		return Utils.GetStaticAttr<TObj, TFld>(field);
 	}
 }

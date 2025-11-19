@@ -80,8 +80,8 @@ public class Plugin : BaseUnityPlugin {
 		}
 		DeckManager deckManager = deckManagers[0];
 
-		Peglin.ClassSystem.Class cls = (Peglin.ClassSystem.Class)typeof(DeckManager).GetField("_selectedClass", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(deckManager);
-		PachinkoBall.OrbRarity rarity = (PachinkoBall.OrbRarity)typeof(DeckManager).GetMethod("GetFinalRarityForOrb", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(deckManager, new object[]{orb, cls});
+		Peglin.ClassSystem.Class cls = deckManager._selectedClass;
+		PachinkoBall.OrbRarity rarity = deckManager.GetFinalRarityForOrb(orb, cls);
 		// Some orbs, like Pebball, are "Not Present" on some classes, but can still be in your deck
 		// Or maybe you're using Custom Start
 		// In this case, try to get the orb's base rarity
@@ -172,9 +172,9 @@ public class Plugin : BaseUnityPlugin {
 		}
 		Relics.RelicManager relicManager = relicManagers[0];
 
-		Peglin.ClassSystem.Class cls = (Peglin.ClassSystem.Class)typeof(Relics.RelicManager).GetField("_selectedClass", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(relicManager);
+		Peglin.ClassSystem.Class cls = relicManager._selectedClass;
 
-		PeglinUI.LoadoutManager.ClassLoadoutPairs[] loadouts = (PeglinUI.LoadoutManager.ClassLoadoutPairs[])typeof(Relics.RelicManager).GetField("_classLoadouts", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(relicManager);
+		PeglinUI.LoadoutManager.ClassLoadoutPairs[] loadouts = relicManager._classLoadouts;
 		Peglin.ClassSystem.ClassLoadoutData loadout = null;
 		for (int i = 0; i < loadouts.Length; i++) {
 			if (loadouts[i].Class == cls) {
@@ -184,7 +184,7 @@ public class Plugin : BaseUnityPlugin {
 		}
 		Relics.RelicRarity rarity;
 		if (loadout != null) {
-			rarity = (Relics.RelicRarity)typeof(Relics.RelicManager).GetMethod("GetFinalRarityForRelic", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(relicManager, new object[]{relic, loadout});
+			rarity = relicManager.GetFinalRarityForRelic(relic, loadout);
 			if (rarity == Relics.RelicRarity.UNAVAILABLE)
 				rarity = relic.globalRarity;
 		} else {
@@ -235,13 +235,13 @@ public class Plugin : BaseUnityPlugin {
 		Scenarios.Shop.PurchasableRelic item_relic = item as Scenarios.Shop.PurchasableRelic;
 		Image background = __instance.itemBackground.GetComponent<Image>();
 		if (item_orb != null) {
-			GameObject orb = (GameObject)typeof(Scenarios.Shop.PurchasableOrb).GetField("_orbPrefab", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(item_orb);
+			GameObject orb = item_orb._orbPrefab;
 
 			(PachinkoBall.OrbRarity rarity, int level) = GetOrbProps(orb);
 			background.color = GetOrbColour(rarity, 1).normalColor;
 			background.sprite = ShopBackground;
 		} else if (item_relic != null) {
-			Relics.Relic relic = (Relics.Relic)typeof(Scenarios.Shop.PurchasableRelic).GetField("_relic", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(item_relic);
+			Relics.Relic relic = item_relic._relic;
 
 			Relics.RelicRarity rarity = GetRelicRarity(relic);
 			background.color = GetRelicColor(rarity).normalColor;

@@ -108,7 +108,7 @@ public class Hooks {
 	[HarmonyPrefix]
 	private static void AddPegPre(Battle.BattleController __instance) {
 		prevDamageAmount = __instance.pegMultiplierDamageTally;
-		prevDamageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
+		prevDamageBonus = __instance._damageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is PegDamageCounter dmgtracker)
 				dmgtracker.StartAddPeg();
@@ -120,7 +120,7 @@ public class Hooks {
 	[HarmonyPostfix]
 	private static void AddPegPost(Battle.BattleController __instance) {
 		int damageAdded = __instance.pegMultiplierDamageTally - prevDamageAmount;
-		int damageBonus = Refl<int>.GetAttr(__instance, "_damageBonus");
+		int damageBonus = __instance._damageBonus;
 		damageBonus -= prevDamageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is PegDamageCounter dmgtracker)

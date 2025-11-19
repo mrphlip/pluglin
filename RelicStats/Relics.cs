@@ -396,7 +396,7 @@ public class RallyingHeart : SimpleCounter {
 			int healAmount = __instance.endOfBattleHealAmount;
 
 			Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
-			var owned = Refl<Dictionary<Relics.RelicEffect, Relics.Relic>>.GetAttr(relicManager, "_ownedRelics");
+			var owned = relicManager._ownedRelics;
 			Relics.Relic r = owned[Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL];
 			owned.Remove(Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL);
 			int baseHeal = __instance.endOfBattleHealAmount;
@@ -937,7 +937,7 @@ public class PumpkinPi : SimpleCounter {
 		if (!Tracker.HaveRelic(Relics.RelicEffect.SLOT_PORTAL))
 			return;
 		PachinkoBall component = collision.GetComponent<PachinkoBall>();
-		if (component != null && Battle.BattleController.AwaitingShotCompletion() && Refl<bool>.GetAttr(__instance, "_isPortal") && Refl<int>.GetAttr(__instance, "_portalUsageCount") < 3) {
+		if (component != null && Battle.BattleController.AwaitingShotCompletion() && __instance._isPortal && __instance._portalUsageCount < 3) {
 			PumpkinPi t = (PumpkinPi)Tracker.trackers[Relics.RelicEffect.SLOT_PORTAL];
 			t.count++;
 			t.Updated();
@@ -1468,7 +1468,7 @@ public class MaskOfJoy : SimpleCounter {
 	[HarmonyPrefix]
 	private static void Disable(Battle.StatusEffects.PlayerStatusEffectController __instance, Battle.StatusEffects.StatusEffect statusEffect) {
 		// incorrect ordering of conditions here makes Used() get called incorrectly
-		Battle.StatusEffects.StatusEffectType[] positives = Refl<Battle.StatusEffects.StatusEffectType[]>.GetAttr(__instance, "_positiveStatusEffects");
+		Battle.StatusEffects.StatusEffectType[] positives = __instance._positiveStatusEffects;
 		if (!Enumerable.Contains(positives, statusEffect.EffectType) || statusEffect.EffectType == Battle.StatusEffects.StatusEffectType.Ballwark || statusEffect.Intensity <= 0) {
 			MaskOfJoy t = (MaskOfJoy)Tracker.trackers[Relics.RelicEffect.INCREASE_POSITIVE_STATUS];
 			t._active = false;
@@ -1615,7 +1615,7 @@ public class AliensRock : SimpleCounter {
 	[HarmonyPrefix]
 	private static void EnableTarget(TargetedAttack __instance) {
 		_active = true;
-		_currentDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+		_currentDamage = __instance._hitDamage;
 		_currentRange = 0;
 		_currentType = Battle.Attacks.AoeAttack.AoeType.SIDE;
 	}
@@ -1628,7 +1628,7 @@ public class AliensRock : SimpleCounter {
 	[HarmonyPrefix]
 	private static void EnableAoe(Battle.Attacks.AoeAttack __instance) {
 		_active = true;
-		_currentDamage = Refl<float>.GetAttr(__instance, "_hitDamage");
+		_currentDamage = __instance._hitDamage;
 		_currentRange = __instance.range;
 		_currentType = __instance.aoeType;
 	}
@@ -1651,10 +1651,10 @@ public class AliensRock : SimpleCounter {
 public class Spinventoriginality : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.UNIQUE_ORBS_BUFF;
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
-		bool oldApplyUniqueBuff = Refl<bool>.GetAttr(attack, "applyUniqueBuff");
-		Utils.SetAttr(attack, "applyUniqueBuff", false);
+		bool oldApplyUniqueBuff = attack.applyUniqueBuff;
+		attack.applyUniqueBuff = false;
 		float res = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
-		Utils.SetAttr(attack, "applyUniqueBuff", oldApplyUniqueBuff);
+		attack.applyUniqueBuff = oldApplyUniqueBuff;
 		return res;
 	}
 }
