@@ -1,3 +1,20 @@
+# 1.3.0
+* Update for Peglin 1.1.19 & 1.1.24
+	* Fix up a ton of relics for the big damage refactor
+		* The delay in this release is mostly due to spending time being intimidated by the size of this refactor
+	* Add counters for the new relics
+		* Grinding Monstera only counts the max HP that is actually realised from hitting the special pegs
+		* Focused Blast counts the total bomb damage dealt to the targeted enemy
+			* And a few other bomb relics have been tweaked to handle their interaction with this relic correctly
+		* Froggo Amulet coutns the max HP gained
+		* A Bad Slime counts the damage added/removed, in the same way as A Good Slime
+		* Split Packages counts the damage added by the extra double-hit pegs
+		* Big Fish counts the extra damage dealt
+		* No obvious stats to count for Critiqualibrium or Collusion Detection
+	* Other updates
+		* Update for Basalt Toadem adding 5 instead of 4 max HP
+		* Bugfix for Glorious SuffeRing, which was accidentally using the Endless DevouRing stats instead (so it would calculate peg buffs as debuffs instead)
+
 # 1.2.1
 * Bugfix for Alien's Rock counting other sources of splash damage (like Sappers exploding)
 
