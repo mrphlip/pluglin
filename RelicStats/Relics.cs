@@ -1230,9 +1230,44 @@ public class GardenersGloves : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
 
+[HarmonyPatch]
 public class GrindingMonstera : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.GAIN_MAX_HP_ON_ENEMY_DEFEAT;
+	private bool _active = false;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {}
 	public override string Tooltip => $"{count} max HP added";
+
+	// For now I'm just gonna assume that every MAX_HP peg is because of this relic
+	// I'm sure in the future they'll probably reuse this mechanic for something else
+	// and then I'll have to keep track
+	[HarmonyPatch(typeof(Battle.BattleController), "HandlePegActivated")]
+	[HarmonyPrefix]
+	private static void Enable(Peg.PegType type) {
+		if (type == Peg.PegType.MAX_HP && HaveRelic(Relics.RelicEffect.GAIN_MAX_HP_ON_ENEMY_DEFEAT)) {
+			GrindingMonstera t = (GrindingMonstera)Tracker.trackers[Relics.RelicEffect.GAIN_MAX_HP_ON_ENEMY_DEFEAT];
+			t._active = true;
+		}
+	}
+	[HarmonyPatch(typeof(Battle.BattleController), "HandlePegActivated")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		GrindingMonstera t = (GrindingMonstera)Tracker.trackers[Relics.RelicEffect.GAIN_MAX_HP_ON_ENEMY_DEFEAT];
+		t._active = false;
+	}
+
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AdjustMaxHealth")]
+	[HarmonyPrefix]
+	private static void Activate(float amount) {
+		GrindingMonstera t = (GrindingMonstera)Tracker.trackers[Relics.RelicEffect.GAIN_MAX_HP_ON_ENEMY_DEFEAT];
+		if (t._active) {
+			t.count += (int)amount;
+			t._active = false;
+		}
+	}
 }
 
 public class SashOfFocus : SimpleCounter {
@@ -1529,31 +1564,42 @@ public class AGoodSlime : PegBuffDamageCounter {
 	[HarmonyPrefix]
 	private static void AddBuff(Peg __instance, int amount) {
 		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
-		if (t._active) {
-			if (t._pegBuffs.ContainsKey(__instance.gameObject.GetInstanceID()))
-				t._pegBuffs[__instance.gameObject.GetInstanceID()] += amount;
+		t.DoAddBuff(__instance, amount);
+		ABadSlime t2 = (ABadSlime)Tracker.trackers[Relics.RelicEffect.DEBUFF_SLIME_PEGS_HARDER];
+		t2.DoAddBuff(__instance, amount);
+	}
+	private void DoAddBuff(Peg __instance, int amount) {
+		if (_active) {
+			if (_pegBuffs.ContainsKey(__instance.gameObject.GetInstanceID()))
+				_pegBuffs[__instance.gameObject.GetInstanceID()] += amount;
 			else
-				t._pegBuffs[__instance.gameObject.GetInstanceID()] = amount;
+				_pegBuffs[__instance.gameObject.GetInstanceID()] = amount;
 		}
-		t._active = false;
+		_active = false;
 	}
 	[HarmonyPatch(typeof(RegularPeg), "CheckAndApplySlime")]
 	[HarmonyPostfix]
 	private static void Disable() {
 		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
 		t._active = false;
+		ABadSlime t2 = (ABadSlime)Tracker.trackers[Relics.RelicEffect.DEBUFF_SLIME_PEGS_HARDER];
+		t2._active = false;
 	}
 	[HarmonyPatch(typeof(LongPeg), "CheckAndApplySlime")]
 	[HarmonyPostfix]
 	private static void DisableLong() {
 		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
 		t._active = false;
+		ABadSlime t2 = (ABadSlime)Tracker.trackers[Relics.RelicEffect.DEBUFF_SLIME_PEGS_HARDER];
+		t2._active = false;
 	}
 	[HarmonyPatch(typeof(Battle.PegManager), "AddQueuedDamageReductionSlime")]
 	[HarmonyPostfix]
 	private static void DisableQueued() {
 		AGoodSlime t = (AGoodSlime)Tracker.trackers[Relics.RelicEffect.SLIME_BUFFS_PEGS];
 		t._active = false;
+		ABadSlime t2 = (ABadSlime)Tracker.trackers[Relics.RelicEffect.DEBUFF_SLIME_PEGS_HARDER];
+		t2._active = false;
 	}
 }
 
@@ -2218,4 +2264,55 @@ public class StatusSymbol : OrbDamageCounter {
 			(goodCount, badCount, effectCount) = ((int, int, int))value;
 		}
 	}
+}
+
+[HarmonyPatch]
+public class FocusedBlast : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.STRONG_BOMBS_ON_ONLY_TARGET;
+	private bool _active = false;
+	public override void Used() {
+		_active = true;
+	}
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
+
+	[HarmonyPatch(typeof(Battle.BattleController), "DamageEnemyWithBomb")]
+	[HarmonyPrefix]
+	private static void Bomb(long damage) {
+		FocusedBlast t = (FocusedBlast)Tracker.trackers[Relics.RelicEffect.STRONG_BOMBS_ON_ONLY_TARGET];
+		if (t._active) {
+			t.count += (int)damage;
+			t.Updated();
+			t._active = false;
+		}
+	}
+}
+
+public class Critiqualibrium : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADD_OR_REMOVE_CRIT;
+}
+
+public class FroggoAmulet : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.MAX_HP_ON_ADD_ORB;
+	public override int Step => 3;
+	public override string Tooltip => $"{count} max HP added";
+}
+
+public class ABadSlime : AGoodSlime {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.DEBUFF_SLIME_PEGS_HARDER;
+}
+
+public class SmallPackages : PegDamageCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.SMALL_ORBS_MULTIHIT;
+}
+
+public class BigFish : DamageTargetedCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.LARGE_ORBS_DAMAGE_TARGETED;
+}
+
+public class CollusionDetection : NoopTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.PRICE_FIXING;
 }
