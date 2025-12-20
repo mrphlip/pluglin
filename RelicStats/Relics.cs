@@ -275,7 +275,11 @@ public class Pocketwatch : PegDamageCounter {
 
 public class ImprovedCatalyst : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_BOMB_DAMAGE;
-	public override int Step => (int)(Utils.EnemyDamageCount() * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE);
+	public override int Step => (int)(
+		HaveRelic(Relics.RelicEffect.STRONG_BOMBS_ON_ONLY_TARGET)
+			? Relics.RelicManager.ONLY_TARGET_BOMB_DMG_MULT * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE
+			: Utils.EnemyDamageCount() * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE
+	);
 	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
@@ -621,7 +625,10 @@ public class WandOfSkulltimateWrath : OrbDamageCounter {
 	private static void BombDamage(int __result) {
 		if (Tracker.HaveRelic(Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG)) {
 			WandOfSkulltimateWrath t = (WandOfSkulltimateWrath)Tracker.trackers[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG];
-			t.bombDamage += Utils.EnemyDamageCount() * __result / 2;
+			if (HaveRelic(Relics.RelicEffect.STRONG_BOMBS_ON_ONLY_TARGET))
+				t.bombDamage += __result / 2;
+			else
+				t.bombDamage += Utils.EnemyDamageCount() * __result / 2;
 			t.Updated();
 		}
 	}
@@ -764,9 +771,9 @@ public class GloriousSuffeRing : OrbDamageCounter {
 	public void HandleRelicBuff(Peg peg) {
 		if (Tracker.HaveRelic(Relic)) {
 			if (_pegBuffs.ContainsKey(peg.gameObject.GetInstanceID()))
-				_pegBuffs[peg.gameObject.GetInstanceID()] += Relics.RelicManager.ALL_ORBS_DEBUFF_AMOUNT;
+				_pegBuffs[peg.gameObject.GetInstanceID()] += Relics.RelicManager.ALL_ORBS_BUFF_AMOUNT;
 			else
-				_pegBuffs[peg.gameObject.GetInstanceID()] = Relics.RelicManager.ALL_ORBS_DEBUFF_AMOUNT;
+				_pegBuffs[peg.gameObject.GetInstanceID()] = Relics.RelicManager.ALL_ORBS_BUFF_AMOUNT;
 		}
 	}
 
@@ -834,7 +841,11 @@ public class RingOfPain : DamageAllCounter {
 
 public class PerfectedReactant : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_BOMB_DAMAGE2;
-	public override int Step => (int)(Utils.EnemyDamageCount() * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE2);
+	public override int Step => (int)(
+		HaveRelic(Relics.RelicEffect.STRONG_BOMBS_ON_ONLY_TARGET)
+			? Relics.RelicManager.ONLY_TARGET_BOMB_DMG_MULT * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE2
+			: Utils.EnemyDamageCount() * Relics.RelicManager.ADDITIONAL_BOMB_DAMAGE2
+	);
 	public override string Tooltip => $"{count} <style=damage>damage added</style>";
 }
 
@@ -1241,7 +1252,7 @@ public class PrimeRodOfFrost : TodoTracker {
 
 public class BasaltToadem : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.INC_MAX_HP_IF_FULL_HP;
-	public override int Step => 4;
+	public override int Step => 5;
 	public override string Tooltip => $"{count} max HP added";
 }
 
