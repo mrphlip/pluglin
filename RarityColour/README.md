@@ -9,6 +9,7 @@ Once installed, post-battle upgrades and shops will have the buttons recoloured,
 * Rare orbs and rare (miniboss) relics will be shown in blue
 * Boss relics will be shown in purple
 * Special (event) orbs and relics will be shown in gold
+* Shop-only relics will be shown in yellow
 
 ## How to install
 

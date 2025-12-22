@@ -22,6 +22,7 @@ public class Plugin : BaseUnityPlugin {
 	private static readonly ColorBlock RARE = MakeColorBlock(0.25f, 0.25f, 0.75f);
 	private static readonly ColorBlock BOSS = MakeColorBlock(0.75f, 0.25f, 0.75f);
 	private static readonly ColorBlock SPECIAL = MakeColorBlock(0.75f, 0.5f, 0.25f);
+	private static readonly ColorBlock SHOP_ONLY = MakeColorBlock(0.85f, 0.85f, 0.25f);
 
 	private static readonly Sprite ItemBackground1 = MakeSprite("ItemBackground1.png");
 	private static readonly Sprite ItemBackground2 = MakeSprite("ItemBackground2.png");
@@ -164,11 +165,11 @@ public class Plugin : BaseUnityPlugin {
 			btn.colors = COMMON;
 	}
 
-	static private Relics.RelicRarity GetRelicRarity(Relics.Relic relic) {
+	static private RelicRarityExt GetRelicRarity(Relics.Relic relic) {
 		Relics.RelicManager[] relicManagers = Resources.FindObjectsOfTypeAll<Relics.RelicManager>();
 		if (relicManagers.Length <= 0) {
 			Logger.LogError($"Couldn't find RelicManager!");
-			return Relics.RelicRarity.COMMON;
+			return RelicRarityExt.COMMON;
 		}
 		Relics.RelicManager relicManager = relicManagers[0];
 
@@ -182,30 +183,36 @@ public class Plugin : BaseUnityPlugin {
 				break;
 			}
 		}
-		Relics.RelicRarity rarity;
+		RelicRarityExt rarity;
 		if (loadout != null) {
-			rarity = relicManager.GetFinalRarityForRelic(relic, loadout);
-			if (rarity == Relics.RelicRarity.UNAVAILABLE)
-				rarity = relic.globalRarity;
+			if (loadout.ShopRelicOverrides.relics.Contains(relic))
+				rarity = RelicRarityExt.SHOP_ONLY;
+			else
+				rarity = (RelicRarityExt)relicManager.GetFinalRarityForRelic(relic, loadout);
+
+			if (rarity == RelicRarityExt.UNAVAILABLE)
+				rarity = (RelicRarityExt)relic.globalRarity;
 		} else {
-			rarity = relic.globalRarity;
+			rarity = (RelicRarityExt)relic.globalRarity;
 		}
 
 		return rarity;
 	}
 
-	static private ColorBlock GetRelicColor(Relics.RelicRarity rarity) {
+	static private ColorBlock GetRelicColor(RelicRarityExt rarity) {
 		switch (rarity) {
-			case Relics.RelicRarity.COMMON:
-			case Relics.RelicRarity.UNAVAILABLE:
+			case RelicRarityExt.COMMON:
+			case RelicRarityExt.UNAVAILABLE:
 			default:
 				return COMMON;
-			case Relics.RelicRarity.RARE:
+			case RelicRarityExt.RARE:
 				return RARE;
-			case Relics.RelicRarity.BOSS:
+			case RelicRarityExt.BOSS:
 				return BOSS;
-			case Relics.RelicRarity.NONE:
+			case RelicRarityExt.NONE:
 				return SPECIAL;
+			case RelicRarityExt.SHOP_ONLY:
+				return SHOP_ONLY;
 		}
 	}
 
@@ -220,7 +227,7 @@ public class Plugin : BaseUnityPlugin {
 			return;
 		}
 
-		Relics.RelicRarity rarity = GetRelicRarity(r);
+		RelicRarityExt rarity = GetRelicRarity(r);
 		btn.colors = GetRelicColor(rarity);
 		Image backgroundImage = btn.targetGraphic as Image;
 		if (backgroundImage != null) {
@@ -243,9 +250,19 @@ public class Plugin : BaseUnityPlugin {
 		} else if (item_relic != null) {
 			Relics.Relic relic = item_relic._relic;
 
-			Relics.RelicRarity rarity = GetRelicRarity(relic);
+			RelicRarityExt rarity = GetRelicRarity(relic);
 			background.color = GetRelicColor(rarity).normalColor;
 			background.sprite = ShopBackground;
 		}
 	}
+}
+
+enum RelicRarityExt
+{
+	NONE,
+	COMMON,
+	RARE,
+	BOSS,
+	UNAVAILABLE,
+	SHOP_ONLY = -1,
 }

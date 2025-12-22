@@ -1,3 +1,6 @@
+# 1.2.0
+* Added a colour (yellow) for the new shop-only relic category added in Peglin 1.1.18
+
 # 1.1.0
 * Updated to work with Peglin 1.1.10
 

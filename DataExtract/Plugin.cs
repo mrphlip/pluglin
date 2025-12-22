@@ -111,19 +111,22 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("__all__ = [\"RelicRarity\", \"OrbRarity\", \"Class\", \"RoomType\", \"ScenarioPreReq\"]");
 			fp.WriteLine("");
 
-			ExtractEnum(fp, typeof(Relics.RelicRarity));
+			ExtractEnum(fp, typeof(Relics.RelicRarity), true);
+			fp.WriteLine("  _SHOP_ONLY = -1");
+			fp.WriteLine("");
 			ExtractEnum(fp, typeof(PachinkoBall.OrbRarity));
 			ExtractEnum(fp, typeof(Peglin.ClassSystem.Class));
 			ExtractEnum(fp, typeof(Worldmap.RoomType));
 			ExtractEnum(fp, typeof(Data.Scenarios.ScenarioPreReq));
 		}
 	}
-	public void ExtractEnum(StreamWriter fp, Type e) {
+	public void ExtractEnum(StreamWriter fp, Type e, bool extra=false) {
 		fp.WriteLine($"class {e.Name}(Enum):");
 		foreach (var i in Enum.GetValues(e)) {
 			fp.WriteLine($"  {enm(i)} = {(int)i}");
 		}
-		fp.WriteLine("");
+		if (!extra)
+			fp.WriteLine("");
 	}
 
 	public IEnumerator LoadScene(int act) {
@@ -151,7 +154,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("__all__ = [\"class_data\"]");
 			fp.WriteLine("");
 
-			fp.WriteLine("ClassData = namedtuple(\"ClassData\", [\"orbs\", \"relics\", \"orb_overrides\", \"relic_overrides\"])\n");
+			fp.WriteLine("ClassData = namedtuple(\"ClassData\", [\"orbs\", \"relics\", \"orb_overrides\", \"relic_overrides\", \"shop_only_chance\"])\n");
 			fp.WriteLine("class_data = {\n");
 			foreach	(Peglin.ClassSystem.Class cls in Enum.GetValues(typeof(Peglin.ClassSystem.Class))) {
 				Peglin.ClassSystem.ClassLoadoutData loadout = null;
@@ -209,7 +212,13 @@ public class Plugin : BaseUnityPlugin {
 						fp.WriteLine($"      \"{relic.name}\": RelicRarity.UNAVAILABLE,");
 					}
 				}
+				if (loadout.ShopRelicOverrides != null) {
+					foreach (var relic in loadout.ShopRelicOverrides.relics) {
+						fp.WriteLine($"      \"{relic.name}\": RelicRarity._SHOP_ONLY,");
+					}
+				}
 				fp.WriteLine("    },");
+				fp.WriteLine($"    {loadout.chanceForGuaranteedShopRelicInShops},");
 				fp.WriteLine("  ),");
 			}
 			fp.WriteLine("}");
