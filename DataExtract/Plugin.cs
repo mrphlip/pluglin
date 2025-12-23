@@ -453,7 +453,13 @@ public class Plugin : BaseUnityPlugin {
 		// Sprite.textureRect measures y coordinates from the bottom up
 		// but ReadPixels measures them from the top down
 		// whyyyy
-		float y = (source.height - rect.y - rect.height) * scale;
+		// OR! MAYBE SOMETIMES IT DOESN'T I DON'T UNDERSTAND YOU UNITY
+		bool UNITY_IS_BEING_A_SHIT_TODAY = false;
+		float y;
+		if (UNITY_IS_BEING_A_SHIT_TODAY)
+			y = (source.height - rect.y - rect.height) * scale;
+		else
+			y = rect.y * scale;
 		Texture2D readableTex = new Texture2D(width, height);
 		readableTex.ReadPixels(new Rect(x, y, width, height), 0, 0);
 		readableTex.Apply();
