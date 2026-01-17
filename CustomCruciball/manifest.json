@@ -1,0 +1,9 @@
+{
+  "name": "Custom_Cruciball",
+  "description": "Allows customising of individual cruciball levels from a custom start",
+  "version_number": "0.0.1",
+  "dependencies": [
+    "BepInEx-BepInExPack_Peglin-5.4.2100"
+  ],
+  "website_url": "https://github.com/mrphlip/pluglin"
+}
