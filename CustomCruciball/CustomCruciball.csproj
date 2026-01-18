@@ -43,4 +43,7 @@
 			<HintPath>../Peglin/Peglin_Data/Managed/Unity.TextMeshPro.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="assets/*.png" />
+	</ItemGroup>
 </Project>

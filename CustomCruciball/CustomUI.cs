@@ -13,7 +13,8 @@ namespace CustomCruciball;
 [HarmonyPatch]
 public class CustomUI {
 	// Unity objects I'm creating
-	private static GameObject cruxButtonPanel, cruxButtonLabel;
+	private static GameObject cruxButtonPanel, cruxButtonLabel, cruxDisplay;
+	private static GameObject[] cruxDisplayImg;
 	
 	// Unity objects in Peglin vanilla
 	private static PeglinUI.LoadoutManager.LoadoutManager loadoutManager;
@@ -53,12 +54,24 @@ public class CustomUI {
 
 		// Shrink the "custom seed" UI to make room for the new elements
 		((RectTransform)seedButtonPanel.transform).sizeDelta = new Vector2(180f, 34.2343f);
-		seedButtonPanel.GetComponent<Image>().color = new Color(1f, 0f, 1f, 0.5f);
 
 		// create our new UI
 		cruxButtonPanel = MakePanel(buttonRow, "CruxButtonPanel", 180f, 32.2343f);
+
 		CopyImage(seedButtonPanel, cruxButtonPanel);
 		cruxButtonLabel = MakeText(cruxButtonPanel, "CruxButtonLabel", "Cruciball", 51.27f, 29.5f);
+
+		cruxDisplay = MakeObject(cruxButtonPanel, "CruxDisplay", 120f, 24f);
+		cruxDisplayImg = new GameObject[20];
+		for (int i = 0; i < 20; i++) {
+			var img = MakeImage(cruxDisplay, $"CruxDisplay{i}", Assets.Unchecked);
+			img.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
+			int x = i % 10, y = i / 10;
+			img.transform.localPosition = new Vector3(12f * x - 54f, -(12f * y - 6f), 1f);
+			cruxDisplayImg[i] = img;
+		}
+		UpdateCruxDisplay();
+
 		var cruxButton = MakeButton(cruxButtonPanel, "CruxButton", 40f, 40f, 0);
 		var cruxButtonBtn = cruxButton.GetComponentInChildren<Button>();
 		if (cruxButtonBtn.onClick == null) cruxButtonBtn.onClick = new Button.ButtonClickedEvent();
@@ -156,6 +169,13 @@ public class CustomUI {
 		dstImg.color = srcImg.color;
 	}
 
+	private static GameObject MakeImage(GameObject parent, string name, Sprite sprite) {
+		var obj = MakeObject(parent, name, sprite.rect.width, sprite.rect.height);
+		var img = obj.AddComponent<Image>();
+		img.sprite = sprite;
+		return obj;
+	}
+
 	// Hide the "Seed" text when a custom seed is entered - to make the field smaller
 	[HarmonyPatch(typeof(SeedInputPopup), "ReturnToCustomStartMenu")]
 	[HarmonyPostfix]
@@ -166,6 +186,14 @@ public class CustomUI {
 	[HarmonyPostfix]
 	private static void ResetCustomSeed() {
 		seedText.SetActive(true);
+	}
+
+	private static void UpdateCruxDisplay() {
+		cruxButtonLabel.SetActive(!State.inst.isCustom);
+		cruxDisplay.SetActive(State.inst.isCustom);
+		for (int i = 0; i < 20; i++) {
+			cruxDisplayImg[i].GetComponent<Image>().sprite = State.inst.levels[i] ? Assets.Checked : Assets.Unchecked;
+		}
 	}
 
 	private static void MoveToCruxEditor() {
