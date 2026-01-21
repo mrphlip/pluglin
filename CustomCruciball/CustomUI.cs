@@ -13,9 +13,8 @@ namespace CustomCruciball;
 [HarmonyPatch]
 public class CustomUI {
 	// Unity objects I'm creating
-	private static GameObject cruxButtonPanel, cruxButtonLabel, cruxDisplay;
-	private static GameObject[] cruxDisplayImg;
-	private static GameObject cruxInputPopup;
+	private static GameObject cruxButtonPanel, cruxButtonLabel, cruxDisplay, cruxInputPopup;
+	private static GameObject[] cruxDisplayImg, cruxCheckbox;
 	
 	// Unity objects in Peglin vanilla
 	private static PeglinUI.LoadoutManager.LoadoutManager loadoutManager;
@@ -63,7 +62,7 @@ public class CustomUI {
 		cruxButtonPanel = MakePanel(buttonRow, "CruxButtonPanel", 180f, 32.2343f);
 
 		CopyImage(seedButtonPanel, cruxButtonPanel);
-		cruxButtonLabel = MakeText(cruxButtonPanel, "CruxButtonLabel", "Cruciball", 51.27f, 29.5f, TextAlignmentOptions.MidlineLeft);
+		cruxButtonLabel = MakeText(cruxButtonPanel, "CruxButtonLabel", "Cruciball", 80f, 29.5f, TextAlignmentOptions.MidlineLeft, 14, 20);
 
 		cruxDisplay = MakeObject(cruxButtonPanel, "CruxDisplay", 120f, 24f);
 		cruxDisplayImg = new GameObject[20];
@@ -105,6 +104,11 @@ public class CustomUI {
 		buttonRow.transform.localPosition = new Vector3(0f, -84f, 0f);
 		var resetButton = MakeButton(buttonRow, "CruxReset", 100f, 30f, 2, "Reset");
 		var applyButton = MakeButton(buttonRow, "CruxApply", 100f, 30f, 1, "Apply");
+
+		cruxCheckbox = new GameObject[20];
+		for (int i = 0; i < Constants.NUM_LEVELS; i++) {
+			MakeCheckbox(cruxInputPopup, i);
+		}
 	}
 
 	private static void DbgObject(string label, GameObject obj) {
@@ -139,7 +143,7 @@ public class CustomUI {
 		return obj;
 	}
 
-	private static GameObject MakeText(GameObject parent, string name, string label, float width, float height, TextAlignmentOptions align=TextAlignmentOptions.Midline) {
+	private static GameObject MakeText(GameObject parent, string name, string label, float width, float height, TextAlignmentOptions align, float fontSizeMin, float fontSizeMax) {
 		var obj = MakeObject(parent, name, width, height);
 		var text = obj.AddComponent<TextMeshProUGUI>();
 		text.text = label;
@@ -148,9 +152,9 @@ public class CustomUI {
 		text.enableAutoSizing = true;
 		text.enableKerning = true;
 		text.enableWordWrapping = false;
-		text.fontSize = 20;
-		text.fontSizeMax = 20;
-		text.fontSizeMin = 14;
+		text.fontSize = fontSizeMax;
+		text.fontSizeMax = fontSizeMax;
+		text.fontSizeMin = fontSizeMin;
 		return obj;
 	}
 
@@ -190,7 +194,7 @@ public class CustomUI {
 				button.transition = srcButton.transition;
 				button.spriteState = srcButton.spriteState;
 
-				var label = MakeText(obj, name + "_lbl", text, width, height);
+				var label = MakeText(obj, name + "_lbl", text, width, height, TextAlignmentOptions.Midline, 20, 20);
 				var lblHandler = label.AddComponent<PeglinUI.TextReactToButtonPressDepress>();
 				if (btnHandler.onPointerDown == null) btnHandler.onPointerDown = new UnityEvent();
 				if (btnHandler.onPointerUp == null) btnHandler.onPointerUp = new UnityEvent();
@@ -221,6 +225,17 @@ public class CustomUI {
 		var obj = MakeObject(parent, name, sprite.rect.width, sprite.rect.height);
 		var img = obj.AddComponent<Image>();
 		img.sprite = sprite;
+		return obj;
+	}
+
+	private static GameObject MakeCheckbox(GameObject parent, int ix) {
+		int x = ix / Constants.NUM_ROWS, y = ix % Constants.NUM_ROWS;
+		var obj = MakeObject(parent, $"CruxCheckboxPanel{ix+1}", Constants.CELL_WIDTH, Constants.CELL_HEIGHT);
+		obj.transform.localPosition = new Vector3(Constants.POPUP_XMIN + Constants.CELL_WIDTH * (x + 0.5f), Constants.POPUP_YMAX - Constants.CELL_HEIGHT * (y + 0.5f), 0);
+		cruxCheckbox[ix] = MakeImage(obj, $"CruxCheckbox{ix+1}", Assets.Unchecked);
+		cruxCheckbox[ix].transform.localPosition = new Vector3((Constants.CELL_HEIGHT - Constants.CELL_WIDTH)/2f, 0f, 0f);
+		var label = MakeText(obj, $"CruxCheckboxLabel{ix+1}", $"[{ix+1}] {Constants.LABELS[ix]}", Constants.CELL_WIDTH - Constants.CELL_HEIGHT, Constants.CELL_HEIGHT, TextAlignmentOptions.MidlineLeft, 10, 10);
+		label.transform.localPosition = new Vector3(Constants.CELL_HEIGHT/2f, 0f, 0f);
 		return obj;
 	}
 
