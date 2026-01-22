@@ -18,6 +18,7 @@ public class CustomUI {
 	
 	// Unity objects in Peglin vanilla
 	private static PeglinUI.LoadoutManager.LoadoutManager loadoutManager;
+	private static Cruciball.CruciballManager cruciballManager;
 	private static GameObject buttonRow, seedButtonPanel, seedText, seedButton, seedButtonLabel;
 	private static GameObject loadoutBasePanel, seedInputPopup, popupContainer, seedApplyButton;
 
@@ -32,9 +33,17 @@ public class CustomUI {
 				return;
 			}
 		}
+		if (cruciballManager == null) {
+			cruciballManager = Utils.GetResource<Cruciball.CruciballManager>();
+			if (cruciballManager == null) {
+				Plugin.Logger.LogError("Could not find CruciballManager!");
+				return;
+			}
+		}
 
 		InitialiseButton();
 		InitialisePage();
+		UpdateCruxDisplay();
 	}
 
 	/*
@@ -73,12 +82,11 @@ public class CustomUI {
 			img.transform.localPosition = new Vector3(12f * x - 54f, -(12f * y - 6f), 1f);
 			cruxDisplayImg[i] = img;
 		}
-		UpdateCruxDisplay();
 
 		var cruxButton = MakeButton(cruxButtonPanel, "CruxButton", 40f, 40f, 0);
 		var cruxButtonBtn = cruxButton.GetComponentInChildren<Button>();
 		if (cruxButtonBtn.onClick == null) cruxButtonBtn.onClick = new Button.ButtonClickedEvent();
-		cruxButtonBtn.onClick.AddListener(CustomUI.MoveToCruxEditor);
+		cruxButtonBtn.onClick.AddListener(MoveToCruxEditor);
 	}
 
 	private static void InitialisePage() {
@@ -104,6 +112,12 @@ public class CustomUI {
 		buttonRow.transform.localPosition = new Vector3(0f, -84f, 0f);
 		var resetButton = MakeButton(buttonRow, "CruxReset", 100f, 30f, 2, "Reset");
 		var applyButton = MakeButton(buttonRow, "CruxApply", 100f, 30f, 1, "Apply");
+		var button = resetButton.GetComponentInChildren<Button>();
+		if (button.onClick == null) button.onClick = new Button.ButtonClickedEvent();
+		button.onClick.AddListener(() => ReturnFromCruxEditor(false));
+		button = applyButton.GetComponentInChildren<Button>();
+		if (button.onClick == null) button.onClick = new Button.ButtonClickedEvent();
+		button.onClick.AddListener(() => ReturnFromCruxEditor(true));
 
 		cruxCheckbox = new GameObject[20];
 		for (int i = 0; i < Constants.NUM_LEVELS; i++) {
@@ -236,6 +250,10 @@ public class CustomUI {
 		cruxCheckbox[ix].transform.localPosition = new Vector3((Constants.CELL_HEIGHT - Constants.CELL_WIDTH)/2f, 0f, 0f);
 		var label = MakeText(obj, $"CruxCheckboxLabel{ix+1}", $"[{ix+1}] {Constants.LABELS[ix]}", Constants.CELL_WIDTH - Constants.CELL_HEIGHT, Constants.CELL_HEIGHT, TextAlignmentOptions.MidlineLeft, 10, 10);
 		label.transform.localPosition = new Vector3(Constants.CELL_HEIGHT/2f, 0f, 0f);
+
+		var button = obj.AddComponent<Button>();
+		if (button.onClick == null) button.onClick = new Button.ButtonClickedEvent();
+		button.onClick.AddListener(() => ToggleCheckbox(ix));
 		return obj;
 	}
 
@@ -251,18 +269,44 @@ public class CustomUI {
 		seedText.SetActive(true);
 	}
 
+	private static void UpdateDisplay(GameObject obj, bool state) {
+		if (obj != null)
+			obj.GetComponent<Image>().sprite = state ? Assets.Checked : Assets.Unchecked;
+	}
+
 	private static void UpdateCruxDisplay() {
 		// This method is called from external hooks so double-check everything is still OK
 		if (cruxButtonLabel != null) cruxButtonLabel.SetActive(!State.inst.isCustom);
 		if (cruxDisplay != null) cruxDisplay.SetActive(State.inst.isCustom);
-		for (int i = 0; i < 20; i++) {
-			if (cruxDisplayImg[i] != null)
-				cruxDisplayImg[i].GetComponent<Image>().sprite = State.inst.levels[i] ? Assets.Checked : Assets.Unchecked;
+		for (int i = 0; i < 20; i++)
+			UpdateDisplay(cruxDisplayImg[i], State.inst.levels[i]);
+	}
+
+	private static void UpdateCruxCheckboxes() {
+		if (!State.inst.isCustom) {
+			int cruxLevel = cruciballManager.currentCruciballLevel;
+			for (int i = 0; i < 20; i++)
+				State.inst.levels[i] = (i < cruxLevel);
 		}
+		for (int i = 0; i < 20; i++)
+			UpdateDisplay(cruxCheckbox[i], State.inst.levels[i]);
+	}
+
+	private static void ToggleCheckbox(int ix) {
+		State.inst.levels[ix] = !State.inst.levels[ix];
+		UpdateDisplay(cruxCheckbox[ix], State.inst.levels[ix]);
 	}
 
 	private static void MoveToCruxEditor() {
 		loadoutBasePanel.SetActive(false);
 		cruxInputPopup.SetActive(true);
+		UpdateCruxCheckboxes();
+	}
+
+	private static void ReturnFromCruxEditor(bool apply) {
+		State.inst.isCustom = apply;
+		loadoutBasePanel.SetActive(true);
+		cruxInputPopup.SetActive(false);
+		UpdateCruxDisplay();
 	}
 }
