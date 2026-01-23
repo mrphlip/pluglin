@@ -284,7 +284,7 @@ public class CustomUI {
 
 	private static void UpdateCruxCheckboxes() {
 		if (!State.inst.isCustom) {
-			int cruxLevel = cruciballManager.currentCruciballLevel;
+			int cruxLevel = cruciballManager._currentCruciballLevel;
 			for (int i = 0; i < 20; i++)
 				State.inst.levels[i] = (i < cruxLevel);
 		}

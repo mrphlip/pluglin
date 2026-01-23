@@ -1,7 +1,7 @@
 TARGET_DEBUG=bin/Debug/netstandard2.1/CustomCruciball.dll
 TARGET_RELEASE=bin/Release/netstandard2.1/CustomCruciball.dll
 
-ALLCODE=Plugin.cs Utils.cs CustomUI.cs Assets.cs State.cs Constants.cs
+ALLCODE=Plugin.cs Utils.cs CustomUI.cs Assets.cs State.cs Constants.cs Hooks.cs
 ALLASSETS=assets/unchecked.png assets/checked.png
 
 $(TARGET_DEBUG): CustomCruciball.csproj $(ALLCODE) $(ALLASSETS)

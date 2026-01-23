@@ -17,7 +17,7 @@ public class Constants {
 		"Add one Pebball\nPebballs have -0/-1",
 		"Minibosses can\nappear in ?",
 		"One less <sprite name=\"CRIT_PEG\">",
-		"Misnavigation deals\n5 damage",
+		"Misnavigation deals\nmore damage",
 		"One less <sprite name=\"REFRESH_PEG\">",
 		"Enemies have more HP",
 		"Post-battle\nhealing reduced",
