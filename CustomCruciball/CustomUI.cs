@@ -274,7 +274,7 @@ public class CustomUI {
 			obj.GetComponent<Image>().sprite = state ? Assets.Checked : Assets.Unchecked;
 	}
 
-	private static void UpdateCruxDisplay() {
+	internal static void UpdateCruxDisplay() {
 		// This method is called from external hooks so double-check everything is still OK
 		if (cruxButtonLabel != null) cruxButtonLabel.SetActive(!State.inst.isCustom);
 		if (cruxDisplay != null) cruxDisplay.SetActive(State.inst.isCustom);
