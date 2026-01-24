@@ -21,6 +21,7 @@ public class CustomUI {
 	private static Cruciball.CruciballManager cruciballManager;
 	private static GameObject buttonRow, seedButtonPanel, seedText, seedButton, seedButtonLabel;
 	private static GameObject loadoutBasePanel, seedInputPopup, popupContainer, seedApplyButton;
+	private static GameObject cruciballWheelButton, cruciballWheel;
 
 
 	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "MoveToLoadoutSelection")]
@@ -41,6 +42,7 @@ public class CustomUI {
 			}
 		}
 
+		InitialiseBaseCanvas();
 		InitialiseButton();
 		InitialisePage();
 		UpdateCruxDisplay();
@@ -52,6 +54,15 @@ public class CustomUI {
 		But no, I'm doing it all manually in code instead...
 		w/e if it works it works
 	*/
+
+	private static void InitialiseBaseCanvas() {
+		if (cruciballWheel != null)
+			return;
+
+		var canvas = loadoutManager.characterSelectCanvasGroup.gameObject;
+		cruciballWheelButton = canvas.transform.Find("CruciballToggleButton").gameObject;
+		cruciballWheel = canvas.transform.Find("CruciballLevelSelectContainer").gameObject;
+	}
 
 	private static void InitialiseButton() {
 		if (cruxButtonPanel != null)
@@ -243,7 +254,14 @@ public class CustomUI {
 	}
 
 	private static GameObject MakeCheckbox(GameObject parent, int ix) {
-		int x = ix / Constants.NUM_ROWS, y = ix % Constants.NUM_ROWS;
+		float x, y;
+		if (ix < 7) {
+			x = 0; y = ix;
+		} else if (ix < 13) {
+			x = 1; y = ix - 6.5f;
+		} else {
+			x = 2; y = ix - 13;
+		}
 		var obj = MakeObject(parent, $"CruxCheckboxPanel{ix+1}", Constants.CELL_WIDTH, Constants.CELL_HEIGHT);
 		obj.transform.localPosition = new Vector3(Constants.POPUP_XMIN + Constants.CELL_WIDTH * (x + 0.5f), Constants.POPUP_YMAX - Constants.CELL_HEIGHT * (y + 0.5f), 0);
 		cruxCheckbox[ix] = MakeImage(obj, $"CruxCheckbox{ix+1}", Assets.Unchecked);
@@ -308,5 +326,13 @@ public class CustomUI {
 		loadoutBasePanel.SetActive(true);
 		cruxInputPopup.SetActive(false);
 		UpdateCruxDisplay();
+	}
+
+	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "ReturnFromLoadoutSelection")]
+	[HarmonyPostfix]
+	private static void FinishedCustomStart() {
+		// If we've customised the cruciball, remove the actual cruciball customisation controls
+		cruciballWheelButton.SetActive(!State.inst.isCustom);
+		cruciballWheel.SetActive(!State.inst.isCustom);
 	}
 }

@@ -3,7 +3,7 @@ namespace CustomCruciball;
 public class Constants {
 	public const int NUM_LEVELS = 20;
 	public const int NUM_COLS = 3;
-	public const int NUM_ROWS = (NUM_LEVELS + NUM_COLS - 1) / NUM_COLS;
+	public const int NUM_ROWS = 7;
 
 	public const float POPUP_XMIN = -147f;
 	public const float POPUP_XMAX = 147f;

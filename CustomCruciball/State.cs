@@ -12,18 +12,18 @@ public class State : SaveObjectData {
 
 	// Hooks to reset when custom start data is cleared
 	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "Cancel")]
-	[HarmonyPostfix]
+	[HarmonyPrefix]
 	private static void Cancel() {
 		inst.isCustom = false;
 	}
 	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "DefaultLoadout")]
-	[HarmonyPostfix]
+	[HarmonyPrefix]
 	private static void Reset() {
 		inst.isCustom = false;
 		CustomUI.UpdateCruxDisplay();
 	}
 	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "OnEnable")]
-	[HarmonyPostfix]
+	[HarmonyPrefix]
 	private static void Init() {
 		inst.isCustom = false;
 	}
