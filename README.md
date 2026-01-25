@@ -12,3 +12,9 @@ Re-colours the buttons for purchasing orbs and relics, after battles and from th
 ![ ](RelicStats/icon.png)
 
 Keeps stats for your relics, so you can see how effective they are in your game.
+
+## [Custom Cruciball](CustomCruciball)
+
+![ ](CustomCruciball/icon.png)
+
+Allows choosing which individual Crubiall effects are enabled, when using a Custom Start.
