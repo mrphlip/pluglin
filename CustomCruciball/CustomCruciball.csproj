@@ -6,7 +6,7 @@
 		<Product>Custom Cruciball</Product>
 		<BepInExPluginGuid>com.mrphlip.peglin.CustomCruciball</BepInExPluginGuid>
 		<Description>Allows customising of individual cruciball levels from a custom start</Description>
-		<Version>0.0.1</Version>
+		<Version>1.0</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 		<RestoreAdditionalProjectSources>
