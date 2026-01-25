@@ -335,4 +335,25 @@ public class CustomUI {
 		cruciballWheelButton.SetActive(!State.inst.isCustom);
 		cruciballWheel.SetActive(!State.inst.isCustom);
 	}
+
+	// some things that test "is custom loadout or custom seed" to determine if it's a custom run
+	// patch them to also check "is custom cruciball"
+	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "ReturnFromLoadoutSelection")]
+	[HarmonyPostfix]
+	private static void ShowCustomWarning(PeglinUI.LoadoutManager.LoadoutManager __instance) {
+		if (State.inst.isCustom)
+			__instance.customLoadoutWarning.SetActive(true);
+	}
+	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutManager), "SetupDataForNewGame")]
+	[HarmonyPostfix]
+	private static void DisableAchievements(PeglinUI.LoadoutManager.LoadoutManager __instance) {
+		if (State.inst.isCustom)
+			Peglin.Achievements.AchievementManager.AchievementsOn = false;
+	}
+	[HarmonyPatch(typeof(PeglinUI.MainMenu.PlayButton), "SetUpNewGameOnLoadMapData")]
+	[HarmonyPostfix]
+	private static void SetCustomRun() {
+		if (State.inst.isCustom)
+			StaticGameData.CurrentRunStats.isCustomRun = true;
+	}
 }
