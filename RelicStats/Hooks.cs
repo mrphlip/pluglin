@@ -107,7 +107,7 @@ public class Hooks {
 	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
 	[HarmonyPrefix]
 	private static void AddPegPre(Battle.BattleController __instance) {
-		prevDamageAmount = __instance.pegMultiplierDamageTally;
+		prevDamageAmount = __instance._pegMultiplierDamageTally;
 		prevDamageBonus = __instance._damageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is PegDamageCounter dmgtracker)
@@ -119,7 +119,7 @@ public class Hooks {
 	[HarmonyPatch(typeof(Battle.BattleController), "AddPeg")]
 	[HarmonyPostfix]
 	private static void AddPegPost(Battle.BattleController __instance) {
-		int damageAdded = __instance.pegMultiplierDamageTally - prevDamageAmount;
+		int damageAdded = __instance._pegMultiplierDamageTally - prevDamageAmount;
 		int damageBonus = __instance._damageBonus;
 		damageBonus -= prevDamageBonus;
 		foreach (var tracker in Tracker.trackers.Values) {
@@ -275,13 +275,34 @@ public class Hooks {
 
 [HarmonyPatch]
 public class Transpilers {
+	public static int? IntVal(object operand) {
+		// It would be far too convenient for a given opcode to have a consistent operand type
+		// why on earth have I seen `ldloc.s 4.0f` in the wild
+		// so, eff it, universal conversion util
+		if (operand == null) return null;
+		if (operand is byte) return (int)(byte)operand;
+		if (operand is sbyte) return (int)(sbyte)operand;
+		if (operand is char) return (int)(char)operand;
+		if (operand is short) return (int)(short)operand;
+		if (operand is ushort) return (int)(ushort)operand;
+		if (operand is int) return (int)operand;
+		if (operand is uint) return (int)(uint)operand;
+		if (operand is long) return (int)(long)operand;
+		if (operand is ulong) return (int)(ulong)operand;
+		if (operand is float) return (int)(float)operand;
+		if (operand is double) return (int)(double)operand;
+		if (operand is LocalBuilder) return ((LocalBuilder)operand).LocalIndex;
+		Plugin.Logger.LogError($"Transpilers.IntVal - no idea what to do with {operand} [{operand.GetType().Name}]");
+		return null;
+	}
+
 	public static int? IsLoadArg(CodeInstruction op) {
 		if (op.opcode == OpCodes.Ldarg_0) return 0;
 		if (op.opcode == OpCodes.Ldarg_1) return 1;
 		if (op.opcode == OpCodes.Ldarg_2) return 2;
 		if (op.opcode == OpCodes.Ldarg_3) return 3;
-		if (op.opcode == OpCodes.Ldarg) return (int?)op.operand;
-		if (op.opcode == OpCodes.Ldarg_S) return (int?)(byte?)op.operand;
+		if (op.opcode == OpCodes.Ldarg) return IntVal(op.operand);
+		if (op.opcode == OpCodes.Ldarg_S) return IntVal(op.operand);
 		return null;
 	}
 
@@ -290,8 +311,8 @@ public class Transpilers {
 		if (op.opcode == OpCodes.Ldloc_1) return 1;
 		if (op.opcode == OpCodes.Ldloc_2) return 2;
 		if (op.opcode == OpCodes.Ldloc_3) return 3;
-		if (op.opcode == OpCodes.Ldloc) return (int?)op.operand;
-		if (op.opcode == OpCodes.Ldloc_S) return (int?)(byte?)op.operand;
+		if (op.opcode == OpCodes.Ldloc) return IntVal(op.operand);
+		if (op.opcode == OpCodes.Ldloc_S) return IntVal(op.operand);
 		return null;
 	}
 
@@ -300,8 +321,8 @@ public class Transpilers {
 	}
 
 	public static int? IsStoreArg(CodeInstruction op) {
-		if (op.opcode == OpCodes.Starg) return (int?)op.operand;
-		if (op.opcode == OpCodes.Starg_S) return (int?)(byte?)op.operand;
+		if (op.opcode == OpCodes.Starg) return IntVal(op.operand);
+		if (op.opcode == OpCodes.Starg_S) return IntVal(op.operand);
 		return null;
 	}
 
@@ -310,8 +331,8 @@ public class Transpilers {
 		if (op.opcode == OpCodes.Stloc_1) return 1;
 		if (op.opcode == OpCodes.Stloc_2) return 2;
 		if (op.opcode == OpCodes.Stloc_3) return 3;
-		if (op.opcode == OpCodes.Stloc) return (int?)op.operand;
-		if (op.opcode == OpCodes.Stloc_S) return (int?)(byte?)op.operand;
+		if (op.opcode == OpCodes.Stloc) return IntVal(op.operand);
+		if (op.opcode == OpCodes.Stloc_S) return IntVal(op.operand);
 		return null;
 	}
 
@@ -367,13 +388,13 @@ public class Transpilers {
 		if (op.opcode == OpCodes.Ldc_I4_7) return 7;
 		if (op.opcode == OpCodes.Ldc_I4_8) return 8;
 		if (op.opcode == OpCodes.Ldc_I4_M1) return -1;
-		if (op.opcode == OpCodes.Ldc_I4) return (int?)op.operand;
-		if (op.opcode == OpCodes.Ldc_I4_S) return (int?)(sbyte?)op.operand;
+		if (op.opcode == OpCodes.Ldc_I4) return IntVal(op.operand);
+		if (op.opcode == OpCodes.Ldc_I4_S) return IntVal(op.operand);
 		return null;
 	}
 
 	public static float? IsLoadConstFloat(CodeInstruction op) {
-		if (op.opcode == OpCodes.Ldc_R4) return (float?)op.operand;
+		if (op.opcode == OpCodes.Ldc_R4) return ((IConvertible)op.operand).ToSingle(null);
 		return null;
 	}
 
@@ -413,7 +434,14 @@ public class Transpilers {
 		bool foundTornSash = false;
 		bool foundCounter = false;
 
+		/*
 		for (int i = 0; i < code.Count; i++) {
+			Plugin.Logger.LogInfo($"{i} - {code[i]}");
+		}
+		*/
+
+		for (int i = 0; i < code.Count; i++) {
+		//for (int i = 228; i <= 228; i++) {
 			// Round Guard
 			if (
 				IsLoadArg(code[i]) == 0 &&

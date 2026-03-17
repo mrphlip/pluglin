@@ -225,8 +225,8 @@ public class ThreeExtraRefresh : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REFRESH3;
 }
 
-public class EvadeChance : NoopTracker {
-	public override Relics.RelicEffect Relic => Relics.RelicEffect.EVADE_CHANCE;
+public class CounterTack : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.EVADE_COUNTER;
 }
 
 public class Apple : NoopTracker {
@@ -426,7 +426,7 @@ public class SandArrows : SimpleCounter {
 	public override string Tooltip => $"{count} <style=blind>Blind applied</style>";
 }
 
-public class Overwhammer : TodoTracker {
+public class Overwhammer : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.NORMAL_ATTACKS_OVERFLOW;
 	// TODO: the relics that affect projectiles are going to be a pain
 }
@@ -676,7 +676,7 @@ public class EchoChamber : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ATTACKS_ECHO;
 }
 
-public class GrabbyHand : TodoTracker {
+public class GrabbyHand : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.FLYING_HORIZONTAL_PIERCE;
 	// TODO: the relics that affect projectiles are going to be a pain
 }
@@ -827,12 +827,12 @@ public class BadCheese : DamageAllCounter {
 [HarmonyPatch]
 public class RingOfPain : DamageAllCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_RETURN;
-	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AttemptDamageReturn")]
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckOnDamagedEffects")]
 	[HarmonyPrefix]
 	private static void Enable() {
 		((RingOfPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = true;
 	}
-	[HarmonyPatch(typeof(Battle.PlayerHealthController), "AttemptDamageReturn")]
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckOnDamagedEffects")]
 	[HarmonyPostfix]
 	private static void Disable() {
 		((RingOfPain)Tracker.trackers[Relics.RelicEffect.DAMAGE_RETURN])._active = false;
@@ -1280,7 +1280,7 @@ public class SashOfFocus : SimpleCounter {
 	public override string Tooltip => $"{count} <style=damage>damage avoided</style>";
 }
 
-public class PrimeRodOfFrost : TodoTracker {
+public class PrimeRodOfFrost : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ALL_ATTACKS_PIERCE;
 	// TODO: the relics that affect projectiles are going to be a pain
 }
@@ -1539,7 +1539,7 @@ public class ChokeMod : SimpleCounter {
 	public override string Tooltip => $"{count} <style=poison>Spinfection applied</style>";
 }
 
-public class AuAuger : TodoTracker {
+public class AuAuger : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.CRITS_PROVIDE_PIERCE;
 	// TODO: the relics that affect projectiles are going to be a pain
 }
@@ -1806,15 +1806,12 @@ public class BallwarkToMuscircle : StatusEffectCounter {
 	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Strength;
 }
 
-public class BeleagueredBoots : NoopTracker {
+public class OldBeleagueredBoots : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_MAX;
 }
 
-public class DoubleBallusion : NoopTracker {
-	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_GAIN;
-	// Not entirely sure what this one is intended to do?
-	// Seems to double ballusion gained, but also you lose all ballusion on dodge instead of half
-	// Luckily, it doesn't actually exist
+public class WeaveOfFate : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_GAIN_AND_LOSS;
 }
 
 public class DodgyDagger : StatusEffectCounter {
@@ -2078,7 +2075,7 @@ public class CallOfTheVoid : SimpleCounter {
 	public override string Tooltip => $"{count} <sprite name=\"PEG\"> destroyed";
 }
 
-public class PincerManeuver : TodoTracker {
+public class PincerManeuver : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REVERSE_PROJECTILE_ATTACK;
 	// TODO: the relics that affect projectiles are going to be a pain
 }
@@ -2153,7 +2150,7 @@ public class HeavyHand : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ORBS_MULTIHIT_BUT_LESS_AIM;
 }
 
-public class SafetyPegulations : TodoTracker {
+public class SafetyPegulations : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.MORE_PIERCE_LESS_BOMB_DAMAGE;
 	// TODO: the relics that affect projectiles are going to be a pain
 }
@@ -2315,4 +2312,24 @@ public class BigFish : DamageTargetedCounter {
 
 public class CollusionDetection : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.PRICE_FIXING;
+}
+
+public class GustavsHolster : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOULDER_BONUS_DAMAGE;
+}
+
+public class DuckAndCover : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_ON_DODGE;
+}
+
+public class SpookyHaglinsScaryHat : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_CREATES_COINS;
+}
+
+public class ChainOfReaction : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.DODGE_PUPPET;
+}
+
+public class BeleagueredBoots : TodoTracker {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.RETAIN_DODGE_BETWEEN_BATTLES;
 }

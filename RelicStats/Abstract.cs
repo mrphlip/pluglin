@@ -58,11 +58,9 @@ public abstract string Tooltip { get; }
 				if (hasStateFields && state == null)
 					Plugin.Logger.LogWarning($"Tracker class {t} should override State property");
 
-				/* TODO: Enable this once I've cleaned up the TODO relics
 				if (t.IsSubclassOf(typeof(TodoTracker)) && !t.IsAbstract) {
 					Plugin.Logger.LogWarning($"Tracker class {t} is still TODO");
 				}
-				*/
 			}
 
 			bool isPatch = t.GetCustomAttributes(typeof(HarmonyPatch), false).Length > 0;
