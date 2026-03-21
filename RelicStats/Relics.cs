@@ -399,8 +399,7 @@ public class RallyingHeart : SimpleCounter {
 		if (Tracker.HaveRelic(Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL)) {
 			int healAmount = __instance.endOfBattleHealAmount;
 
-			Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
-			var owned = relicManager._ownedRelics;
+			var owned = Utils.relicManager._ownedRelics;
 			Relics.Relic r = owned[Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL];
 			owned.Remove(Relics.RelicEffect.ADDITIONAL_END_BATTLE_HEAL);
 			int baseHeal = __instance.endOfBattleHealAmount;

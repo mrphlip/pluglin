@@ -28,7 +28,7 @@ public class Plugin : BaseUnityPlugin {
 	[HarmonyPatch(typeof(PeglinUI.Tooltip), "Initialize", new Type[] {typeof(Relics.Relic)})]
 	[HarmonyPostfix]
 	static private void PatchTooltipInitPost(PeglinUI.Tooltip __instance, Relics.Relic relic) {
-		if (!Tracker.HaveRelic(relic.effect))
+		if (!Tracker.HaveRelicIgnoreDisable(relic.effect))
 			return;
 
 		_activeTooltip = __instance;

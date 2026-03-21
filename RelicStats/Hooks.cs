@@ -22,14 +22,9 @@ public class Hooks {
 	}
 
 	[HarmonyPatch(typeof(Relics.RelicManager), "AddRelic")]
-	[HarmonyPostfix]
+	[HarmonyPrefix]
 	static private void AddRelic(Relics.Relic relic) {
-		Tracker.AddRelic(relic.effect, true);
-	}
-	[HarmonyPatch(typeof(Relics.RelicManager), "LoadRelicFromSaveFile")]
-	[HarmonyPostfix]
-	static private void AddRelicFromSave(Relics.Relic relic) {
-		Tracker.AddRelic(relic.effect, false);
+		Tracker.AddRelic(relic.effect);
 	}
 
 	[HarmonyPatch(typeof(Relics.RelicManager), "LoadRelicData")]

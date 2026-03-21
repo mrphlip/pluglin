@@ -23,7 +23,6 @@ public abstract string Tooltip { get; }
 
 
 	public static readonly Dictionary<Relics.RelicEffect, Tracker> trackers = new Dictionary<Relics.RelicEffect, Tracker>();
-	public static readonly HashSet<Relics.RelicEffect> relics = new HashSet<Relics.RelicEffect>();
 	public static void PopulateTrackers() {
 		foreach (Type t in typeof(Tracker).Assembly.GetTypes()) {
 			if (t.IsSubclassOf(typeof(Tracker)) && !t.IsAbstract) {
@@ -80,27 +79,24 @@ public abstract string Tooltip { get; }
 	private static void AddTracker(Tracker tracker) {
 		trackers.Add(tracker.Relic, tracker);
 	}
-	public static void ResetAll(bool clearOwned = true) {
+	public static void ResetAll() {
 		foreach (var tracker in trackers) {
 			tracker.Value.Reset();
 		}
-		if (clearOwned)
-			relics.Clear();
 	}
-	// Maintain our own cache of which relics are collected, to avoid
-	// having to go digging for a RelicManager every time we need to check
-	public static void AddRelic(Relics.RelicEffect relic, bool isNew) {
-		if (!relics.Contains(relic)) {
+	public static void AddRelic(Relics.RelicEffect relic) {
+		if (!HaveRelicIgnoreDisable(relic)) {
 			Tracker tracker;
-			if (isNew && trackers.TryGetValue(relic, out tracker))
+			if (trackers.TryGetValue(relic, out tracker))
 				tracker.Reset();
-			relics.Add(relic);
 		}
 	}
-	public static bool HaveRelic(Relics.RelicEffect relic) => relics.Contains(relic);
+	public static bool HaveRelic(Relics.RelicEffect relic) => Utils.relicManager.RelicEffectActive(relic);
+	public static bool HaveRelicIgnoreDisable(Relics.RelicEffect relic) =>
+		Utils.relicManager._ownedRelics != null && Utils.relicManager._ownedRelics.ContainsKey(relic);
 
 	public static void LoadData() {
-		ResetAll(false);
+		ResetAll();
 		RelicStatsSaveData data = (RelicStatsSaveData)ToolBox.Serialization.DataSerializer.Load<SaveObjectData>(RelicStatsSaveData.KEY, ToolBox.Serialization.DataSerializer.SaveType.RUN);
 		if (data != null) {
 			foreach (var item in data.relicStates) {
@@ -118,7 +114,7 @@ public abstract string Tooltip { get; }
 	public static void SaveData() {
 		RelicStatsSaveData data = new RelicStatsSaveData();
 		foreach (var tracker in trackers.Values) {
-			if (HaveRelic(tracker.Relic)) {
+			if (HaveRelicIgnoreDisable(tracker.Relic)) {
 				data.relicStates[(int)tracker.Relic] = tracker.State;
 			}
 		}
@@ -268,8 +264,7 @@ public abstract class PegMultiDamageCounter : PegDamageCounter {
 public abstract class OrbDamageCounter : DamageCounter {
 	public override void Used() {}
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
-		Relics.RelicManager relicManager = Utils.GetResource<Relics.RelicManager>();
-		var owned = relicManager._ownedRelics;
+		var owned = Utils.relicManager._ownedRelics;
 		Relics.Relic r = owned[Relic];
 		owned.Remove(Relic);
 		float baseDamage = attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
@@ -394,6 +389,17 @@ public class Utils {
 			return objs[0];
 		else
 			return null;
+	}
+
+	static private Relics.RelicManager _relicManager = null;
+	static public Relics.RelicManager relicManager {
+		get {
+			// checking "== null" implicitly also checks if this refers to a unity object
+			// that has been deleted
+			if (_relicManager == null)
+				_relicManager = GetResource<Relics.RelicManager>();
+			return _relicManager;
+		}
 	}
 
 	static public string Plural(int n, string ifplural = "s", string ifsingle = "") {
