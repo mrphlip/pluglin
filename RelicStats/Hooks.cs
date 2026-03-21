@@ -428,6 +428,7 @@ public class Transpilers {
 		bool foundSash = false;
 		bool foundTornSash = false;
 		bool foundCounter = false;
+		bool foundEvadeCounter = false;
 
 		/*
 		for (int i = 0; i < code.Count; i++) {
@@ -547,6 +548,48 @@ public class Transpilers {
 				foundCounter = true;
 				continue;
 			}
+
+			// Counter Tack
+			if (
+				IsLoadArg(code[i]) == 0 &&
+				IsLoadField(code[i+1])?.Name == "_relicManager" &&
+				IsLoadConstInt(code[i+2]) == (int)Relics.RelicEffect.EVADE_COUNTER &&
+				IsCallMethod(code[i+3])?.Name == "AttemptUseRelic" &&
+				IsBranchFalse(code[i+4])
+			) {
+				// scan forward to find the actual damage call (it's quite far)
+				bool foundend = false;
+				int j;
+				for (j = i + 5; j <= code.Count; j++) {
+					if (
+						IsLoadArg(code[j]) != null &&
+						IsLoadLoc(code[j+1]) != null &&
+						IsLoadConstInt(code[j+2]) != null &&
+						IsLoadConstFloat(code[j+3]) != null &&
+						IsLoadConstFloat(code[j+4]) != null &&
+						IsLoadConstInt(code[j+5]) != null &&
+						IsLoadConstInt(code[j+6]) != null &&
+						IsLoadConstInt(code[j+7]) != null &&
+						IsLoadConstInt(code[j+8]) != null &&
+						IsCallMethod(code[j+9])?.Name == "Damage"
+					) {
+						foundend = true;
+						break;
+					} else if (IsCallMethod(code[j])?.Name == "AttemptUseRelic") {
+						// don't look past handling for other relics (just in case)
+						break;
+					}
+				}
+				if (foundend) {
+					CodeInstruction op1 = new CodeInstruction(OpCodes.Dup, null);
+					CodeInstruction op2 = MakeCall(typeof(Transpilers).GetMethod("EvadeCounter"));
+					code.Insert(j+2, op2);
+					code.Insert(j+2, op1);
+					i = j+10;
+					foundEvadeCounter = true;
+					continue;
+				}
+			}
 		}
 
 		if (!foundRoundGuard) {
@@ -567,6 +610,10 @@ public class Transpilers {
 		}
 		if (!foundCounter) {
 			Plugin.Logger.LogError("Couldn't find Ripostal Service code in PlayerHealthController.Damage");
+			return null;
+		}
+		if (!foundEvadeCounter) {
+			Plugin.Logger.LogError("Couldn't find Counter Tack code in PlayerHealthController.Damage");
 			return null;
 		}
 
@@ -600,4 +647,32 @@ public class Transpilers {
 	public static void BallwarkCounter(float amount) {
 		((RipostalService)Tracker.trackers[Relics.RelicEffect.BALLWARK_COUNTER]).Damage((int)amount);
 	}
+
+	public static void EvadeCounter(long amount) {
+		((CounterTack)Tracker.trackers[Relics.RelicEffect.EVADE_COUNTER]).Damage((int)amount);
+	}
+
+	/*
+	// For testing purposes: fix bug with Gustav's Holster
+	// a condition is checking "this.locName" instead of "this.locNameString"
+	[HarmonyPatch(typeof(Battle.Attacks.Attack), "CalculateStaticDamageBuffs")]
+	[HarmonyTranspiler]
+	static private IEnumerable<CodeInstruction> CalcBuffsPatcher(IEnumerable<CodeInstruction> origCode) {
+		var code = new List<CodeInstruction>(origCode);
+		int found = 0;
+
+		for (int i = 0; i < code.Count; i++) {
+			if (IsLoadField(code[i])?.Name == "locName") {
+				code[i].operand = typeof(Battle.Attacks.Attack).GetField("locNameString");
+				found++;
+			}
+		}
+
+		if (found != 1) {
+			Plugin.Logger.LogError("Couldn't find Gustav's Holster bug in Attack.CalculateStaticDamageBuffs");
+			return null;
+		}
+		return code;
+	}
+	*/
 }

@@ -225,8 +225,14 @@ public class ThreeExtraRefresh : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.ADDITIONAL_REFRESH3;
 }
 
-public class CounterTack : TodoTracker {
+public class CounterTack : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.EVADE_COUNTER;
+	public override void Used() {}
+	public void Damage(int damage) {
+		count += damage;
+		Updated();
+	}
+	public override string Tooltip => $"{count} <style=damage>damage dealt</style>";
 }
 
 public class Apple : NoopTracker {
@@ -1809,8 +1815,28 @@ public class OldBeleagueredBoots : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_MAX;
 }
 
-public class WeaveOfFate : TodoTracker {
+[HarmonyPatch]
+public class WeaveOfFate : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_DOUBLE_GAIN_AND_LOSS;
+	private bool _active = true;
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override void Used() {
+		_active = true;
+	}
+	[HarmonyPatch(typeof(Battle.StatusEffects.PlayerStatusEffectController), "CheckRelicIntensityEffects")]
+	[HarmonyPostfix]
+	private static void After(int __result) {
+		WeaveOfFate t = (WeaveOfFate)Tracker.trackers[Relics.RelicEffect.BALLUSION_DOUBLE_GAIN_AND_LOSS];
+		if (t._active) {
+			t.count += __result / 2;
+			t.Updated();
+		}
+		t._active = false;
+	}
+	public override string Tooltip => $"{count} <style=dodge>Ballusion added</style>";
 }
 
 public class DodgyDagger : StatusEffectCounter {
@@ -2313,22 +2339,54 @@ public class CollusionDetection : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.PRICE_FIXING;
 }
 
-public class GustavsHolster : TodoTracker {
+public class GustavsHolster : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BOULDER_BONUS_DAMAGE;
 }
 
-public class DuckAndCover : TodoTracker {
+public class DuckAndCover : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.BALLUSION_ON_DODGE;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class SpookyHaglinsScaryHat : TodoTracker {
+[HarmonyPatch]
+public class SpookyHaglinsScaryHat : SimpleCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DAMAGE_CREATES_COINS;
+	private bool _active = false;
+	public override void Used() {}
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override string Tooltip => $"{count} <sprite name=\"GOLD\"> added";
+
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckOnDamagedEffects")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		if (Tracker.HaveRelic(Relics.RelicEffect.DAMAGE_CREATES_COINS))
+			((SpookyHaglinsScaryHat)Tracker.trackers[Relics.RelicEffect.DAMAGE_CREATES_COINS])._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckOnDamagedEffects")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		((SpookyHaglinsScaryHat)Tracker.trackers[Relics.RelicEffect.DAMAGE_CREATES_COINS])._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.BattleController), "ApplyGoldToPegs")]
+	[HarmonyPostfix]
+	private static void AddGold(int gold) {
+		SpookyHaglinsScaryHat t = (SpookyHaglinsScaryHat)Tracker.trackers[Relics.RelicEffect.DAMAGE_CREATES_COINS];
+		if (t._active) {
+			t.count += gold;
+			t.Updated();
+		}
+		t._active = false;
+	}
 }
 
-public class ChainOfReaction : TodoTracker {
+public class ChainOfReaction : StatusEffectCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.DODGE_PUPPET;
+	public override Battle.StatusEffects.StatusEffectType type => Battle.StatusEffects.StatusEffectType.Ballusion;
 }
 
-public class BeleagueredBoots : TodoTracker {
+public class BeleagueredBoots : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RETAIN_DODGE_BETWEEN_BATTLES;
 }

@@ -266,9 +266,12 @@ public abstract class OrbDamageCounter : DamageCounter {
 	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
 		var owned = Utils.relicManager._ownedRelics;
 		Relics.Relic r = owned[Relic];
+		Battle.Attacks.Attack.StaticDamageModifierData olddata = attack._currentShotStaticDamageModifierData;
 		owned.Remove(Relic);
+		attack.CalculateStaticDamageBuffs(true);
 		float baseDamage = attack.GetDamage(attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount, false);
 		owned.Add(Relic, r);
+		attack._currentShotStaticDamageModifierData = olddata;
 		return baseDamage;
 	}
 }
