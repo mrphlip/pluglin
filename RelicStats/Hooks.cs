@@ -205,40 +205,6 @@ public class Hooks {
 		t.ApplyStatusEffect(statusEffect);
 	}
 
-	private static bool _buildingRunSummary = false;
-	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
-	[HarmonyPrefix]
-	private static void SetupRelicsPre() {
-		// Only apply tooltips to the post-run summary, and not to the Encirclepedia history section
-		if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "RunSummary")
-			_buildingRunSummary = true;
-	}
-	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
-	[HarmonyPostfix]
-	private static void SetupRelicsPost() {
-		_buildingRunSummary = false;
-	}
-	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutIcon), "InitializeRelic")]
-	[HarmonyPostfix]
-	private static void FixRelicIcon(PeglinUI.LoadoutManager.LoadoutIcon __instance) {
-		if (_buildingRunSummary) {
-			if (__instance.text != null) {
-				// This text box extends out and makes the mouseover hitbox weird
-				// It's blank for relics, anyway (it's used for the "x5" caption for orbs)
-				UnityEngine.Object.Destroy(__instance.text);
-				__instance.text = null;
-			}
-			var mousecomponent = __instance.GetComponent<PeglinUI.UIUtils.MouseOverDetectorPointerHandler>();
-			var selectcomponent = __instance.GetComponent<SelectionEventListener>();
-			if (mousecomponent == null)
-				__instance.gameObject.AddComponent<PeglinUI.UIUtils.MouseOverDetectorPointerHandler>();
-			if (selectcomponent == null)
-				__instance.gameObject.AddComponent<SelectionEventListener>();
-			if (mousecomponent == null || selectcomponent == null)
-				__instance.SetupTooltipEventsRelic();
-		}
-	}
-
 	[HarmonyPatch(typeof(Battle.PegManager), "InitializePegs")]
 	[HarmonyPostfix]
 	private static void NewBattle() {
@@ -675,4 +641,61 @@ public class Transpilers {
 		return code;
 	}
 	*/
+}
+
+[HarmonyPatch]
+public class RunSummaryPatcher {
+	// Hooks to enable tooltips on the run summary screen
+	private static bool _buildingRunSummary = false;
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
+	[HarmonyPrefix]
+	private static void SetupRelicsPre() {
+		// Only apply tooltips to the post-run summary, and not to the Encirclepedia history section
+		if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "RunSummary")
+			_buildingRunSummary = true;
+	}
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.RunStatisticsDetails), "CreateRelics")]
+	[HarmonyPostfix]
+	private static void SetupRelicsPost() {
+		_buildingRunSummary = false;
+	}
+	[HarmonyPatch(typeof(PeglinUI.LoadoutManager.LoadoutIcon), "InitializeRelic")]
+	[HarmonyPostfix]
+	private static void FixRelicIcon(PeglinUI.LoadoutManager.LoadoutIcon __instance) {
+		if (_buildingRunSummary) {
+			if (__instance.text != null) {
+				// This text box extends out and makes the mouseover hitbox weird
+				// It's blank for relics, anyway (it's used for the "x5" caption for orbs)
+				UnityEngine.Object.Destroy(__instance.text);
+				__instance.text = null;
+			}
+			var mousecomponent = __instance.GetComponent<PeglinUI.UIUtils.MouseOverDetectorPointerHandler>();
+			var selectcomponent = __instance.GetComponent<SelectionEventListener>();
+			if (mousecomponent == null)
+				__instance.gameObject.AddComponent<PeglinUI.UIUtils.MouseOverDetectorPointerHandler>();
+			if (selectcomponent == null)
+				__instance.gameObject.AddComponent<SelectionEventListener>();
+			if (mousecomponent == null || selectcomponent == null)
+				__instance.SetupTooltipEventsRelic();
+		}
+	}
+
+	// The objects for the "you got your first win on this class" popup on the run summary
+	// overlap with some of the relics, and steal the focus for the tooltips
+	// So disable it when the popup isn't visible
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.FirstWinOnEachClassManager), "Awake")]
+	[HarmonyPostfix]
+	private static void FirstWinAwake(PeglinUI.RunSummary.FirstWinOnEachClassManager __instance) {
+		__instance._classWinPrefab.gameObject.SetActive(false);
+	}
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.FirstWinOnEachClassManager), "DoFirstWinOnClassAnimation")]
+	[HarmonyPrefix]
+	private static void FirstWinEnable(PeglinUI.RunSummary.FirstWinOnEachClassManager __instance) {
+		__instance._classWinPrefab.gameObject.SetActive(true);
+	}
+	[HarmonyPatch(typeof(PeglinUI.RunSummary.FirstWinOnEachClassManager), "FadeOutAndContinue")]
+	[HarmonyPostfix]
+	private static void FirstWinDisable(PeglinUI.RunSummary.FirstWinOnEachClassManager __instance) {
+		__instance._classWinPrefab.gameObject.SetActive(false);
+	}
 }
