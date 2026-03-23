@@ -1,3 +1,18 @@
+# 1.4.0
+* Update for Peglin 2.0.5
+	* 7 new relics added
+		* Spooky Haglin's Scary Hat counts the gold added to the board
+		* Chain of Reaction and Duck (and Cover) count the Ballusion granted
+		* Counter Tack counts the damage dealt
+		* Weave of Fate counts the extra Ballusion added
+		* Gustav's Holster counts the extra damage added
+		* Beleagured Boots does not have anything useful to count
+	* Update to Crystal Catalyst for the new relic behaviour
+	* Don't count stats for relics when they're disabled by Relic Rotation
+	* Some bug fixes for the tooltips on the Run Summary screen
+	* Bug fix for relics that count damage added/removed by affecting orb stats, which was broken by a new optimisation refactor in the game.
+	* Choosing not to also add stats for all the new Act 4 challenges, even though they look like relics... maybe I will revisit this decision later but for now I don't think they're worth the effort.
+
 # 1.3.0
 * Update for Peglin 1.1.19 & 1.1.24
 	* Fix up a ton of relics for the big damage refactor
