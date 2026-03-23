@@ -2124,7 +2124,7 @@ public class CrystalCatalyst : SimpleCounter {
 		CrystalCatalyst t = (CrystalCatalyst)Tracker.trackers[Relics.RelicEffect.MORE_SPINFECTION_DAMAGE_PER_ACT];
 		foreach (Battle.StatusEffects.StatusEffect effect in __instance.StatusEffects) {
 			if (effect.EffectType == Battle.StatusEffects.StatusEffectType.Poison) {
-				t.count += 5 * Map.MapController.instance.Act * effect.Intensity;
+				t.count += (int)Battle.StatusEffects.StatusEffectData.POISON_DAMAGE_MULTIPLIER * effect.Intensity;
 				t.Updated();
 			}
 		}
