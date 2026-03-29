@@ -1,3 +1,7 @@
+# 1.4.1
+* Update for Peglin 2.0.9
+	* Bugfix for internal change that broke the hooks for calculating orb damage
+
 # 1.4.0
 * Update for Peglin 2.0.5
 	* 7 new relics added
