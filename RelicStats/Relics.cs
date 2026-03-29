@@ -790,7 +790,7 @@ public class GloriousSuffeRing : OrbDamageCounter {
 		}
 	}
 
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, long dmgBonus, int critCount) {
 		float result = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus - _bonus, critCount);
 		_bonus = 0;
 		return result;
@@ -1712,7 +1712,7 @@ public class AliensRock : SimpleCounter {
 
 public class Spinventoriginality : OrbDamageCounter {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.UNIQUE_ORBS_BUFF;
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, long dmgBonus, int critCount) {
 		bool oldApplyUniqueBuff = attack.applyUniqueBuff;
 		attack.applyUniqueBuff = false;
 		float res = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
@@ -1899,7 +1899,7 @@ public class EndlessDevouRing : OrbDamageCounter {
 			}
 		}
 	}
-	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+	public override float GetBaseDamage(Battle.Attacks.Attack attack, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, long dmgBonus, int critCount) {
 		float result = base.GetBaseDamage(attack, attackManager, pegMultipliersTally, dmgMult, dmgBonus - _bonus, critCount);
 		_bonus = 0;
 		return result;

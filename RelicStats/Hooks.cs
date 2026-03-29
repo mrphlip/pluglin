@@ -75,13 +75,13 @@ public class Hooks {
 
 	[HarmonyPatch(typeof(TargetedAttack), "Fire")]
 	[HarmonyPrefix]
-	private static void FireTargeted(TargetedAttack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount)
+	private static void FireTargeted(TargetedAttack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, long dmgBonus, int critCount)
 		=> HandleFire(__instance, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
 	[HarmonyPatch(typeof(Battle.Attacks.ProjectileAttack), "Fire")]
 	[HarmonyPrefix]
-	private static void FireProjectile(Battle.Attacks.ProjectileAttack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount)
+	private static void FireProjectile(Battle.Attacks.ProjectileAttack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, long dmgBonus, int critCount)
 		=> HandleFire(__instance, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
-	private static void HandleFire(Battle.Attacks.Attack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, int dmgBonus, int critCount) {
+	private static void HandleFire(Battle.Attacks.Attack __instance, Battle.Attacks.AttackManager attackManager, int pegMultipliersTally, float dmgMult, long dmgBonus, int critCount) {
 		foreach (var tracker in Tracker.trackers.Values) {
 			if (tracker is DamageCounter dmgtracker)
 				dmgtracker.HandleFire(__instance, attackManager, pegMultipliersTally, dmgMult, dmgBonus, critCount);
