@@ -2390,3 +2390,39 @@ public class ChainOfReaction : StatusEffectCounter {
 public class BeleagueredBoots : NoopTracker {
 	public override Relics.RelicEffect Relic => Relics.RelicEffect.RETAIN_DODGE_BETWEEN_BATTLES;
 }
+
+[HarmonyPatch]
+public class LightningGrease : SimpleCounter {
+	public override Relics.RelicEffect Relic => Relics.RelicEffect.LIGHTNING_SLIME_ON_DAMAGE;
+	private bool _active = false;
+	public override void Used() {}
+	public override void Reset() {
+		base.Reset();
+		_active = false;
+	}
+	public override string Tooltip => $"{count} slime added";
+
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckOnDamagedEffects")]
+	[HarmonyPrefix]
+	private static void Enable() {
+		if (Tracker.HaveRelic(Relics.RelicEffect.LIGHTNING_SLIME_ON_DAMAGE))
+			((LightningGrease)Tracker.trackers[Relics.RelicEffect.LIGHTNING_SLIME_ON_DAMAGE])._active = true;
+	}
+	[HarmonyPatch(typeof(Battle.PlayerHealthController), "CheckOnDamagedEffects")]
+	[HarmonyPostfix]
+	private static void Disable() {
+		((LightningGrease)Tracker.trackers[Relics.RelicEffect.LIGHTNING_SLIME_ON_DAMAGE])._active = false;
+	}
+	[HarmonyPatch(typeof(Battle.PegManager), "ApplySlimeToRandomPegs")]
+	[HarmonyPrefix]
+	private static void AddSlime(Peg.SlimeType slimeType, int numToSlime) {
+		if (slimeType == Peg.SlimeType.LightningSlime) {
+			LightningGrease t = (LightningGrease)Tracker.trackers[Relics.RelicEffect.LIGHTNING_SLIME_ON_DAMAGE];
+			if (t._active) {
+				t.count += numToSlime;
+				t.Updated();
+			}
+			t._active = false;
+		}
+	}
+}

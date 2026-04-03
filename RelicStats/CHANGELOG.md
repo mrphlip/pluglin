@@ -1,3 +1,7 @@
+# 1.5.0
+* Update for Peglin 2.0.10
+	* Add new relic Lightning Grease
+
 # 1.4.1
 * Update for Peglin 2.0.9
 	* Bugfix for internal change that broke the hooks for calculating orb damage
