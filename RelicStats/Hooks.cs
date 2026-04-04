@@ -617,30 +617,6 @@ public class Transpilers {
 	public static void EvadeCounter(long amount) {
 		((CounterTack)Tracker.trackers[Relics.RelicEffect.EVADE_COUNTER]).Damage((int)amount);
 	}
-
-	/*
-	// For testing purposes: fix bug with Gustav's Holster
-	// a condition is checking "this.locName" instead of "this.locNameString"
-	[HarmonyPatch(typeof(Battle.Attacks.Attack), "CalculateStaticDamageBuffs")]
-	[HarmonyTranspiler]
-	static private IEnumerable<CodeInstruction> CalcBuffsPatcher(IEnumerable<CodeInstruction> origCode) {
-		var code = new List<CodeInstruction>(origCode);
-		int found = 0;
-
-		for (int i = 0; i < code.Count; i++) {
-			if (IsLoadField(code[i])?.Name == "locName") {
-				code[i].operand = typeof(Battle.Attacks.Attack).GetField("locNameString");
-				found++;
-			}
-		}
-
-		if (found != 1) {
-			Plugin.Logger.LogError("Couldn't find Gustav's Holster bug in Attack.CalculateStaticDamageBuffs");
-			return null;
-		}
-		return code;
-	}
-	*/
 }
 
 [HarmonyPatch]
