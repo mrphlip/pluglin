@@ -47,7 +47,9 @@ public class Plugin : BaseUnityPlugin {
 		Loading.PeglinSceneLoader.Scene.FOREST_MAP,
 		Loading.PeglinSceneLoader.Scene.CASTLE_MAP,
 		Loading.PeglinSceneLoader.Scene.MINES_MAP,
+		Loading.PeglinSceneLoader.Scene.CORE_MAP,
 	};
+	private const int ACT_COUNT = 4;
 
 	public IEnumerator Go() {
 		yield return null;
@@ -59,6 +61,7 @@ public class Plugin : BaseUnityPlugin {
 			ExtractEnums();
 			ExtractClasses();
 			ExtractRelicData();
+			ExtractChallengeData();
 			ExtractOrbData();
 			ExtractSeedData();
 			yield return UniverseLib.RuntimeHelper.StartCoroutine(ExtractMapData());
@@ -66,6 +69,7 @@ public class Plugin : BaseUnityPlugin {
 
 		ExtractOrbImages();
 		ExtractRelicImages();
+		ExtractChallengeImages();
 
 		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(0));
 	}
@@ -118,6 +122,12 @@ public class Plugin : BaseUnityPlugin {
 			ExtractEnum(fp, typeof(Peglin.ClassSystem.Class));
 			ExtractEnum(fp, typeof(Worldmap.RoomType));
 			ExtractEnum(fp, typeof(Data.Scenarios.ScenarioPreReq));
+
+			fp.WriteLine("class OrbSize(Enum):");
+			fp.WriteLine("  DEFAULT = 0");
+			fp.WriteLine("  LARGE = 1");
+			fp.WriteLine("  SMALL = 2");
+			fp.WriteLine("");
 		}
 	}
 	public void ExtractEnum(StreamWriter fp, Type e, bool extra=false) {
@@ -251,21 +261,40 @@ public class Plugin : BaseUnityPlugin {
 		fp.WriteLine($"RelicRarity.{relic.globalRarity}),");
 	}
 
+	public void ExtractChallengeData() {
+		using (StreamWriter fp = new StreamWriter($"{targetDir}/challenges.py")) {
+			fp.WriteLine("from collections import namedtuple");
+			fp.WriteLine("__all__ = [\"challenges\"]");
+			fp.WriteLine("");
+
+			var challengeSet = Map.MapController.instance._globalChallenges;
+
+			fp.WriteLine("Challenge = namedtuple(\"Challenge\", [\"key\", \"name\", \"effect\"])");
+			fp.WriteLine("challenges = {");
+			foreach	(var challenge in challengeSet.challenges) {
+				string name = I2.Loc.LocalizationManager.GetTranslation(challenge.nameKey);
+				fp.WriteLine($"  \"{challenge.name}\": Challenge(\"{challenge.name}\", \"{name}\", \"{challenge.effect}\"),");
+			}
+			fp.WriteLine("}\n\n");
+		}
+	}
+
 	public void ExtractOrbData() {
 		using (StreamWriter fp = new StreamWriter($"{targetDir}/orbs.py")) {
 			fp.WriteLine("from collections import namedtuple");
-			fp.WriteLine("from .enums import OrbRarity");
+			fp.WriteLine("from .enums import OrbRarity, OrbSize");
 			fp.WriteLine("__all__ = [\"orbs\"]");
 			fp.WriteLine("");
 
 			var deckManager = Map.MapController.instance._deckManager;
 
-			fp.WriteLine("Orb = namedtuple(\"Orb\", [\"key\", \"name\", \"rarity\"])");
+			fp.WriteLine("Orb = namedtuple(\"Orb\", [\"key\", \"name\", \"rarity\", \"size\"])");
 			fp.WriteLine("orbs = {\n");
 			foreach (var orb in deckManager.OrbPool.AvailableOrbs) {
 				var atk = orb.GetComponent<Battle.Attacks.Attack>();
 				var ball = orb.GetComponent<PachinkoBall>();
-				fp.WriteLine($"  \"{atk.locNameString}\": Orb(\"{atk.locNameString}\", \"{atk.Name}\", OrbRarity.{ball.orbRarity}),");
+				var size = ball.IsOrbLargerThanDefault() ? "LARGE" : ball.IsOrbSmallerThanDefault() ? "SMALL" : "DEFAULT";
+				fp.WriteLine($"  \"{atk.locNameString}\": Orb(\"{atk.locNameString}\", \"{atk.Name}\", OrbRarity.{ball.orbRarity}, OrbSize.{size}),");
 			}
 			fp.WriteLine("}\n\n");
 		}
@@ -336,7 +365,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("MapScenario = namedtuple(\"MapScenario\", [\"name\", \"id\", \"prereqs\"])");
 			fp.WriteLine("MapMinigame = namedtuple(\"MapMinigame\", [\"name\", \"is_orbs\", \"is_relics\", \"orb_count\", \"relic_count\", \"relic_rarity\"])");
 			fp.WriteLine("maps = [");
-			for (var i = 1; i <= 3; i++) {
+			for (var i = 1; i <= ACT_COUNT; i++) {
 				yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadMap(i));
 				var map = Map.MapController.instance;
 				fp.WriteLine("  Map(");
@@ -478,6 +507,15 @@ public class Plugin : BaseUnityPlugin {
 		WritePNG(filename, sprite.texture, sprite.textureRect, scale);
 	}
 
+	// Mostly orbs that have been renamed since uploading them
+	// I already did a pass once renaming all the images to the correct names,
+	// not gonna do it again
+	private readonly Dictionary<string, string> ORB_NAME = new Dictionary<string, string> {
+		["blind"] = "Darkness_Eterball",
+		["double_edged_sworb"] = "Double-Edged_Sworb",
+		["double_trouball"] = "Double_Trouball",
+	};
+
 	void ExtractOrbImages() {
 		Directory.CreateDirectory($"{targetDir}/orbs");
 		var extracted = new HashSet<int>();
@@ -503,6 +541,8 @@ public class Plugin : BaseUnityPlugin {
 			else
 				name = orb.name;
 			name = name.Replace(" ", "_");
+			if (atk != null && ORB_NAME.ContainsKey(atk.locNameString))
+				name = ORB_NAME[atk.locNameString];
 			if (suffix.ContainsKey(name)) {
 				suffix[name]++;
 				name = $"{name}__{suffix[name]}";
@@ -513,6 +553,45 @@ public class Plugin : BaseUnityPlugin {
 			WritePNG($"{targetDir}/orbs/{name}.png", sprite, 4);
 		}
 	}
+
+	// Rename relics to match the filenames that already exist in the wiki for these
+	// I'm not going through and renaming them all wikiside this time, there's too many
+	// Mostly just names in all-lowercase but also some typos
+	private readonly Dictionary<Relics.RelicEffect, string> RELIC_NAME = new Dictionary<Relics.RelicEffect, string> {
+		[Relics.RelicEffect.NO_DAMAGE_REDUCTION] = "Axe",
+		[Relics.RelicEffect.LOSE_HP_GAIN_BALLWARK] = "Bastion_reaction",
+		[Relics.RelicEffect.RETAIN_DODGE_BETWEEN_BATTLES] = "Beleaguered_boots",
+		[Relics.RelicEffect.LONGER_AIMER] = "Unicorn_Horn",
+		[Relics.RelicEffect.BLIND_BRAMBLE_COMBO] = "Branch_of_Ember",
+		[Relics.RelicEffect.NO_DAMAGE_ON_RELOAD] = "Buckler",
+		[Relics.RelicEffect.MAX_HEALTH_LARGE] = "Cake",
+		[Relics.RelicEffect.ATTACKS_APPLY_TRANSPHERENCY] = "Clear_the_way",
+		[Relics.RelicEffect.HITTING_CRIT_ADDS_TEMP_CRITS] = "Countercrit",
+		[Relics.RelicEffect.ALL_ORBS_MORBID] = "Defresh_potion",
+		[Relics.RelicEffect.GAIN_BALLUSION_FROM_ENEMY_DMG] = "Distraction_reaction",
+		[Relics.RelicEffect.SPINESSE_WHEN_DODGING] = "Dodgy_dagger",
+		[Relics.RelicEffect.RANDOMLY_ROLL_DAMAGE] = "Dungeon_die",
+		[Relics.RelicEffect.RANDOM_STATUS_EFFECT_ON_CRIT] = "Effective_Critisism",
+		[Relics.RelicEffect.ADD_BALLUSION_WITH_SPAWNS] = "Fast_reakaton",
+		[Relics.RelicEffect.COINS_PROVIDE_BALLUSION] = "Flaunty_gauntlets",
+		[Relics.RelicEffect.COINS_PROVIDE_HEALING] = "Haglins_hat",
+		[Relics.RelicEffect.DISCARD_GAIN_CRIT_BALLUSION] = "Is_dis_your_card",
+		[Relics.RelicEffect.DISCARD_TO_UPGRADE] = "Modest_mallet",
+		[Relics.RelicEffect.CONVERT_COIN_TO_DAMAGE] = "Molten_mantle",
+		[Relics.RelicEffect.GOLD_ADDS_TO_DAMAGE] = "Peglinero_pendant",
+		[Relics.RelicEffect.LOSE_BALLWARK_GAIN_BALLANCE] = "Piece_of_mind",
+		[Relics.RelicEffect.SLOT_PORTAL] = "Pumpkin_Pi",
+		[Relics.RelicEffect.BOMB_NAV_GOLD] = "Reduce_refuse_recycle",
+		[Relics.RelicEffect.REFRESH_UPGRADES_PEGS] = "Refresh_perspective",
+		[Relics.RelicEffect.DAMAGE_RETURN] = "Ring_of_Indignation",
+		[Relics.RelicEffect.PREVENT_LETHAL_DAMAGE] = "Sash_of_focus",
+		[Relics.RelicEffect.ATTACKS_APPLY_EXPLOITABALL] = "Spiffy_crit",
+		[Relics.RelicEffect.START_WITH_EXPLOITABALL] = "Stacked_orbacus",
+		[Relics.RelicEffect.BALLUSION_GUARANTEED_CRIT] = "Steady_scope",
+		[Relics.RelicEffect.DAMAGE_CREATES_DAMAGE_REDUCTION_SLIME] = "Subtraction_reaction",
+		[Relics.RelicEffect.BALLUSION_ON_CRIT] = "Vitamin_c",
+		[Relics.RelicEffect.DOUBLE_DAMAGE_HURT_ON_PEG] = "Wand_of_Skulltimate_Power",
+	};
 
 	void ExtractRelicImages() {
 		Directory.CreateDirectory($"{targetDir}/relics");
@@ -525,9 +604,24 @@ public class Plugin : BaseUnityPlugin {
 
 	void ExtractRelicImage(Relics.Relic relic) {
 		string name = relic.englishDisplayName;
-		name = name.Replace("?", "_");
+		//name = name.Replace("?", "_");
+		name = name.Replace("'", "");
 		name = name.Replace(" ", "_");
+		if (RELIC_NAME.ContainsKey(relic.effect))
+			name = RELIC_NAME[relic.effect];
 		WritePNG($"{targetDir}/relics/{name}.png", relic.sprite, 4);
+	}
+
+	void ExtractChallengeImages() {
+		Directory.CreateDirectory($"{targetDir}/challenges");
+		var challengeSet = Map.MapController.instance._globalChallenges;
+
+		foreach	(var challenge in challengeSet.challenges) {
+			string name = I2.Loc.LocalizationManager.GetTranslation(challenge.nameKey);
+			name = name.Replace("?", "_");
+			name = name.Replace(" ", "_");
+			WritePNG($"{targetDir}/challenges/{name}.png", challenge.sprite, 4);
+		}
 	}
 }
 
