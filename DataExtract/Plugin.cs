@@ -92,6 +92,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("from .enums import *");
 			fp.WriteLine("from .classes import *");
 			fp.WriteLine("from .relics import *");
+			fp.WriteLine("from .challenges import *");
 			fp.WriteLine("from .orbs import *");
 			fp.WriteLine("from .seeds import *");
 			fp.WriteLine("from .maps import *");
@@ -511,17 +512,45 @@ public class Plugin : BaseUnityPlugin {
 	// I already did a pass once renaming all the images to the correct names,
 	// not gonna do it again
 	private readonly Dictionary<string, string> ORB_NAME = new Dictionary<string, string> {
-		["blind"] = "Darkness_Eterball",
-		["double_edged_sworb"] = "Double-Edged_Sworb",
-		["double_trouball"] = "Double_Trouball",
+		["Darcness_Eterball"] = "Darkness_Eterball",
+		["Douball-Edged_Sworb"] = "Double-Edged_Sworb",
+		["Douball_Trouball"] = "Double_Trouball",
+
+		["Squirrelball-Lvl1"] = "Squirrel_Ball",
+		["DemonSquirrel-Lvl1"] = "Demon_Squirrel",
+	};
+	private readonly HashSet<string> SKIP_ORBS = new HashSet<string> {
+		"BaseOrb",
+		"GoldPeg",
+		"NavigationOrb",
+		"VineMultiball-Lvl1",
+		"VineMultiballSmall-Lvl1",
+		"VineMultiballLarge-Lvl1",
 	};
 
 	void ExtractOrbImages() {
 		Directory.CreateDirectory($"{targetDir}/orbs");
+		Directory.CreateDirectory($"{targetDir}/orbs/anim");
+		using (StreamWriter fp = new StreamWriter($"{targetDir}/orbs/anim/gen.sh")) {
+			fp.NewLine = "\n";
+			fp.WriteLine("#!/bin/bash");
+			fp.WriteLine("set -euo pipefail");
+			fp.WriteLine("rm -rf ../animout");
+			fp.WriteLine("mkdir ../animout");
+
+			ExtractOrbImages(fp);
+		}
+	}
+
+	void ExtractOrbImages(StreamWriter fp) {
 		var extracted = new HashSet<int>();
 		var suffix = new Dictionary<string, int>();
 		bool assemballSeen = false;
 		foreach (var orb in Resources.FindObjectsOfTypeAll<PachinkoBall>()) {
+			var atk = orb.GetComponent<Battle.Attacks.Attack>();
+			if (!atk)
+				continue;
+
 			var sprite = orb.sprite;
 			if (orb is Battle.Pachinko.BallBehaviours.AssemballParent assemball) {
 				if (assemballSeen)
@@ -534,15 +563,16 @@ public class Plugin : BaseUnityPlugin {
 				extracted.Add(sprite.GetInstanceID());
 			}
 
-			var atk = orb.GetComponent<Battle.Attacks.Attack>();
 			string name;
-			if (atk != null && atk.Name != null && atk.Name != "")
+			if (atk.Name != null && atk.Name != "")
 				name = atk.Name;
 			else
 				name = orb.name;
 			name = name.Replace(" ", "_");
-			if (atk != null && ORB_NAME.ContainsKey(atk.locNameString))
-				name = ORB_NAME[atk.locNameString];
+			if (ORB_NAME.ContainsKey(name))
+				name = ORB_NAME[name];
+			if (SKIP_ORBS.Contains(name))
+				continue;
 			if (suffix.ContainsKey(name)) {
 				suffix[name]++;
 				name = $"{name}__{suffix[name]}";
@@ -551,7 +581,65 @@ public class Plugin : BaseUnityPlugin {
 			}
 
 			WritePNG($"{targetDir}/orbs/{name}.png", sprite, 4);
+
+			var anim = orb.GetComponentInChildren<Animator>();
+			if (anim)
+				ExtractOrbAnimation(fp, name, anim);
 		}
+	}
+
+	private void ExtractOrbAnimation(StreamWriter fp, string name, Animator anim) {
+		if (!anim) return;
+		if (!anim.enabled) return;
+		if (!anim.runtimeAnimatorController) return;
+		if (anim.runtimeAnimatorController.animationClips.Length <= 0) return;
+		var render = anim.gameObject.GetComponent<SpriteRenderer>();
+		foreach (var clip in anim.runtimeAnimatorController.animationClips) {
+			if (clip.empty)
+				continue;
+
+			string suffix = "";
+			if (anim.runtimeAnimatorController.animationClips.Length > 1)
+				suffix = $"__{clip.name}";
+
+			if (name == "Egg" && suffix.ToLower().Contains("crack")) {
+				name = "Egg_Crack";
+				suffix = "";
+			}
+
+			float frameRate = clip.frameRate * 2;
+			var frames = new List<(Sprite sprite, int count)>();
+			float f;
+			for (int i = 0; (f = (i + 0.5f) / frameRate + clip.startTime) < clip.stopTime; i++) {
+				clip.SampleAnimation(render.gameObject, f);
+				if (frames.Count > 0 && SameSprite(frames[frames.Count - 1].sprite, render.sprite))
+					frames[frames.Count - 1] = (render.sprite, frames[frames.Count - 1].count + 1);
+				else
+					frames.Add((render.sprite, 1));
+			}
+			if (frames.Count <= 1)
+				continue;
+
+			int ix = 0;
+			using (StreamWriter fp2 = new StreamWriter($"{targetDir}/orbs/anim/{name}{suffix}.txt")) {
+				fp2.WriteLine("ffconcat version 1.0");
+				foreach (var (sprite, count) in frames) {
+					WritePNG($"{targetDir}/orbs/anim/{name}{suffix}__{ix:00}.png", sprite, 4);
+					fp2.WriteLine($"file '{name}{suffix}__{ix:00}.png'");
+					fp2.WriteLine($"duration {count/frameRate}");
+					ix++;
+				}
+			}
+			fp.WriteLine($"ffmpeg -f concat -safe 0 -i '{name}{suffix}.txt' -f apng -plays 0 '../animout/{name}{suffix}_anim.png'");
+		}
+	}
+
+	private bool SameSprite(Sprite a, Sprite b) {
+		if (a == b)
+			return true;
+		if (a.texture == b.texture && a.textureRect == b.textureRect)
+			return true;
+		return false;
 	}
 
 	// Rename relics to match the filenames that already exist in the wiki for these
