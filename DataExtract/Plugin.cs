@@ -11,6 +11,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace DataExtract;
@@ -42,8 +43,7 @@ public class Plugin : BaseUnityPlugin {
 
 	private String targetDir;
 
-	private Loading.PeglinSceneLoader.Scene[] scenes = new Loading.PeglinSceneLoader.Scene[] {
-		Loading.PeglinSceneLoader.Scene.MAIN_MENU,
+	private Loading.PeglinSceneLoader.Scene[] act_scenes = new Loading.PeglinSceneLoader.Scene[] {
 		Loading.PeglinSceneLoader.Scene.FOREST_MAP,
 		Loading.PeglinSceneLoader.Scene.CASTLE_MAP,
 		Loading.PeglinSceneLoader.Scene.MINES_MAP,
@@ -54,7 +54,7 @@ public class Plugin : BaseUnityPlugin {
 	public IEnumerator Go() {
 		yield return null;
 		using (var patcher = new Patcher()) {
-			yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(1));
+			yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadActScene(1));
 
 			Init();
 
@@ -71,12 +71,15 @@ public class Plugin : BaseUnityPlugin {
 		ExtractRelicImages();
 		ExtractChallengeImages();
 
-		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(0));
+		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScenarioScene());
+		ExtractScenarios();
+
+		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadMainScene());
 	}
 
 	public IEnumerator LoadMap(int act) {
 		using (var patcher = new Patcher()) {
-			yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScene(act));
+			yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadActScene(act));
 		}
 	}
 
@@ -140,7 +143,7 @@ public class Plugin : BaseUnityPlugin {
 			fp.WriteLine("");
 	}
 
-	public IEnumerator LoadScene(int act) {
+	public IEnumerator LoadActScene(int act) {
 		if (Map.MapController.instance != null) {
 			if (act > 0 && Map.MapController.instance.Act == act)
 				yield break;
@@ -148,10 +151,22 @@ public class Plugin : BaseUnityPlugin {
 			UnityEngine.Object.Destroy(Map.MapController.instance.gameObject);
 			Map.MapController.instance = null;
 		}
-		Loading.PeglinSceneLoader.Instance.LoadScene(scenes[act]);
+		Loading.PeglinSceneLoader.Instance.LoadScene(act_scenes[act-1]);
 		if (act > 0)
 			while (Map.MapController.instance == null)
 				yield return null;
+	}
+
+	public IEnumerator LoadMainScene() {
+		Loading.PeglinSceneLoader.Instance.LoadScene(Loading.PeglinSceneLoader.Scene.MAIN_MENU);
+		// nothing we can usefully wait for here, but still want this to be an async method for parity
+		yield return null;
+	}
+
+	public IEnumerator LoadScenarioScene() {
+		Loading.PeglinSceneLoader.Instance.LoadScene(Loading.PeglinSceneLoader.Scene.TEXT_SCENARIO);
+		while (PixelCrushers.DialogueSystem.DialogueManager.masterDatabase == null)
+			yield return null;
 	}
 
 	public void ExtractClasses() {
@@ -564,7 +579,7 @@ public class Plugin : BaseUnityPlugin {
 			}
 
 			string name;
-			if (atk.Name != null && atk.Name != "")
+			if (!String.IsNullOrEmpty(atk.Name))
 				name = atk.Name;
 			else
 				name = orb.name;
@@ -709,6 +724,77 @@ public class Plugin : BaseUnityPlugin {
 			name = name.Replace("?", "_");
 			name = name.Replace(" ", "_");
 			WritePNG($"{targetDir}/challenges/{name}.png", challenge.sprite, 4);
+		}
+	}
+
+	void ExtractScenarios() {
+		Directory.CreateDirectory($"{targetDir}/scenarios");
+
+		foreach (var conv in PixelCrushers.DialogueSystem.DialogueManager.masterDatabase.conversations) {
+			ExtractScenario(conv);
+		}
+	}
+
+	void ExtractScenario(PixelCrushers.DialogueSystem.Conversation conv) {
+		using (StreamWriter fp = new StreamWriter($"{targetDir}/scenarios/{conv.id:00} - {conv.Title.Replace("/","_")}.txt")) {
+			fp.WriteLine(conv.Title);
+			if (!String.IsNullOrEmpty(conv.Description))
+				fp.WriteLine(conv.Description);
+			fp.WriteLine("");
+
+			foreach (var de in conv.dialogueEntries) {
+				fp.WriteLine($"[{de.id}] {de.Title}");
+				fp.WriteLine(de.DialogueText);
+				if (!String.IsNullOrEmpty(de.conditionsString)) {
+					fp.WriteLine($"Condition: {de.conditionsString}");
+				}
+				if (!String.IsNullOrEmpty(de.userScript)) {
+					fp.WriteLine($"Script: {de.userScript}");
+				}
+				foreach (var call in de.onExecute.m_PersistentCalls.GetListeners()) {
+					fp.Write($"OnExecute: {call.target}.{call.methodName}(");
+					switch(call.mode) {
+						case PersistentListenerMode.Void:
+							break;
+						case PersistentListenerMode.Object:
+							if (call.arguments.unityObjectArgument is OrbPool pool) {
+								fp.Write("OrbPool[");
+								foreach (var orb in pool.AvailableOrbs)
+									fp.Write($"{orb}, ");
+								fp.Write("]");
+							} else {
+								fp.Write($"{call.arguments.unityObjectArgument}");
+							}
+							break;
+						case PersistentListenerMode.Int:
+							fp.Write($"{call.arguments.intArgument}");
+							break;
+						case PersistentListenerMode.Float:
+							fp.Write($"{call.arguments.floatArgument}f");
+							break;
+						case PersistentListenerMode.String:
+							fp.Write($"\"{call.arguments.stringArgument}\"");
+							break;
+						case PersistentListenerMode.Bool:
+							fp.Write(b(call.arguments.boolArgument));
+							break;
+						case PersistentListenerMode.EventDefined:
+						default:
+							fp.Write("...");
+							break;
+					}
+					fp.WriteLine(")");
+				}
+				fp.Write("-> ");
+				foreach (var link in de.outgoingLinks) {
+					if (link.isConnector)
+						fp.Write($"[{link.destinationConversationID}-{link.destinationDialogueID}], ");
+					else
+						fp.Write($"{link.destinationDialogueID}, ");
+				}
+				fp.WriteLine("");
+				fp.WriteLine("");
+			}
 		}
 	}
 }
