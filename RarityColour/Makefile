@@ -25,6 +25,9 @@ install: $(TARGET_DEBUG)
 instrelease: $(TARGET_RELEASE)
 	cp $(TARGET_RELEASE) ../BepInEx/plugins
 
+uninstall:
+	rm -f ../BepInEx/plugins/RarityColour.dll
+
 assets:
 	mkdir -p assets
 
@@ -46,4 +49,4 @@ assets/ShopBackground.png: srcassets/Shop_Background.png
 clean:
 	rm -rf bin obj assets RarityColour.zip
 
-.PHONY: all debug release zip install instrelease clean
+.PHONY: all debug release zip install instrelease uninstall clean

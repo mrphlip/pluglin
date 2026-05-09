@@ -24,7 +24,10 @@ install: $(TARGET_DEBUG)
 instrelease: $(TARGET_RELEASE)
 	cp $(TARGET_RELEASE) ../BepInEx/plugins
 
+uninstall:
+	rm -f ../BepInEx/plugins/RelicStats.dll
+
 clean:
 	rm -rf bin obj RelicStats.zip
 
-.PHONY: all debug release zip install instrelease clean
+.PHONY: all debug release zip install instrelease uninstall clean
