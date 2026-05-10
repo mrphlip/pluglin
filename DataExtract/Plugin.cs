@@ -1,4 +1,4 @@
-﻿// Start(DataExtract.Plugin.inst.Go());
+// Start(DataExtract.Plugin.inst.Go());
 // Start(DataExtract.Plugin.inst.LoadMap(1));
 
 using BepInEx;
