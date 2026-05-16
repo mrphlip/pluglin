@@ -74,6 +74,8 @@ public class Plugin : BaseUnityPlugin {
 		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadScenarioScene());
 		ExtractScenarios();
 
+		ExtractTranslations();
+
 		yield return UniverseLib.RuntimeHelper.StartCoroutine(LoadMainScene());
 	}
 
@@ -372,7 +374,7 @@ public class Plugin : BaseUnityPlugin {
 		using (StreamWriter fp = new StreamWriter($"{targetDir}/maps.py")) {
 			fp.WriteLine("from collections import namedtuple");
 			fp.WriteLine("from .enums import RelicRarity, RoomType, ScenarioPreReq");
-			fp.WriteLine("__all__ = [\"map\"]");
+			fp.WriteLine("__all__ = [\"maps\"]");
 			fp.WriteLine("");
 
 			fp.WriteLine("Map = namedtuple(\"Map\", [\"name\", \"easy_battles\", \"battles\", \"minibosses\", \"mimic\", \"scenarios\", \"minigames\", \"nodes\", \"treasure_rare_chance\", \"min_miniboss\", \"min_shop\", \"min_treasure\"])");
@@ -795,6 +797,18 @@ public class Plugin : BaseUnityPlugin {
 				fp.WriteLine("");
 				fp.WriteLine("");
 			}
+		}
+	}
+
+	void ExtractTranslations() {
+		int count = 0;
+		foreach (var source in I2.Loc.LocalizationManager.Sources) {
+			foreach (string cat in source.GetCategories(true)) {
+				using (StreamWriter fp = new StreamWriter($"{targetDir}/translations_{count}_{cat}.csv")) {
+					fp.Write(source.Export_CSV(cat));
+				}
+			}
+			count++;
 		}
 	}
 }
