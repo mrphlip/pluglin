@@ -44,4 +44,7 @@
       <HintPath>../BepInEx/plugins/mrphlip-Forbge/Forbge.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets/*.png" />
+  </ItemGroup>
 </Project>

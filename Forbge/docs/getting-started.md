@@ -50,6 +50,12 @@ private void Register() {
 	// ...
 }
 ```
+3. In your project folder, make a subfolder called `assets`, where images can be stored, and add it to your `.csproj`:
+```xml
+<ItemGroup>
+  <EmbeddedResource Include="assets/*.png" />
+</ItemGroup>
+```
 
 # References
 * The docs for [dotnet](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet), the build system

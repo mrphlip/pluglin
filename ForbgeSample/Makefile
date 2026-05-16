@@ -1,13 +1,14 @@
 TARGET_DEBUG=bin/Debug/netstandard2.1/ForbgeSample.dll
 TARGET_RELEASE=bin/Release/netstandard2.1/ForbgeSample.dll
 
-ALLCODE=Plugin.cs
+ALLCODE=$(wildcard *.cs)
+ASSETS=$(wildcard assets/*.png)
 
-$(TARGET_DEBUG): ForbgeSample.csproj $(ALLCODE)
+$(TARGET_DEBUG): ForbgeSample.csproj $(ALLCODE) $(ASSETS)
 	dotnet build --configuration Debug
 debug: $(TARGET_DEBUG)
 
-$(TARGET_RELEASE): ForbgeSample.csproj $(ALLCODE)
+$(TARGET_RELEASE): ForbgeSample.csproj $(ALLCODE) $(ASSETS)
 	dotnet build --configuration Release
 release: $(TARGET_RELEASE)
 
