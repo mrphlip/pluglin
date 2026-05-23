@@ -108,4 +108,5 @@ public class Managers {
     public static Map.MapController mapController => Map.MapController.instance;
     public static SaveManager saveManager => SaveManager.Instance;
     public static TooltipManager tooltipManager => TooltipManager.Instance;
+    public static Loading.PeglinSceneLoader sceneLoader => Loading.PeglinSceneLoader.Instance;
 }

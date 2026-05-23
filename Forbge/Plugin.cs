@@ -3,6 +3,7 @@ using System.Reflection;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using UnityEngine.SceneManagement;
 
 namespace Forbge;
 
@@ -21,12 +22,18 @@ public class Registry : BaseUnityPlugin {
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
-    [HarmonyPatch(typeof(Loading.AssetLoading), "LoadAllAssets")]
-    [HarmonyPrefix]
-    private static void HookLoadAssets(ref Action onLoadComplete) {
-        // call our PerformRegistration method _before_ chaining to Peglin's callback
-        // which will finalise everything and switch to the main menu
-        onLoadComplete = PerformRegistration + onLoadComplete;
+    private static bool firstTime = true;
+    [HarmonyPatch(typeof(Loading.PeglinSceneLoader), "HideLoadingScreen")]
+    [HarmonyPostfix]
+    private static void HookSceneChange() {
+        // Try to hook into the first time we switch to the Main Menu scene
+        // This is after all the builtin content has been loaded, and the important
+        // managers should be available. (eg LoadoutManager doesn't exist until
+        // we switch to the main menu scene.)
+        if (firstTime && SceneManager.GetActiveScene().name == "MainMenu") {
+            firstTime = false;
+            PerformRegistration();
+        }
     }
 
 
@@ -38,6 +45,8 @@ public class Registry : BaseUnityPlugin {
             Logger.LogWarning("No plugins registered");
             return;
         }
+
+        CustomOrb.Init();
 
         Logger.LogInfo($"Starting registration for {onRegister.GetInvocationList().Length} plugin(s)");
         inRegistration = true;

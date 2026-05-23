@@ -22,5 +22,6 @@ public class Plugin : BaseUnityPlugin {
 
     private void Register() {
         SampleRelics.Register();
+        SampleOrbs.Register();
     }
 }
