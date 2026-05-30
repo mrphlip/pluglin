@@ -11,24 +11,22 @@ namespace ForbgeSample;
 
 [HarmonyPatch]
 public class SampleRelics {
-    static Relic heartshield;
-    static Relic evokemod;
+    static CustomRelic heartshield;
+    static CustomRelic evokemod;
 
     internal static void Register() {
-        RelicBuilder r = new RelicBuilder();
-        r.name["en"] = "Heartshield";
-        r.description["en"] = "<style=heal>Healing</style> above your max HP will be converted into <style=ballwark>half as much Ballwark</style>.";
-        r.rarity = RelicRarity.RARE;
-        r.sprite = AssetHelper.MakeSprite("heartshield.png");
-        heartshield = r.Register();
+        heartshield = new CustomRelic("Heartshield");
+        heartshield.Name["en"] = "Heartshield";
+        heartshield.Description["en"] = "<style=heal>Healing</style> above your max HP will be converted into <style=ballwark>half as much Ballwark</style>.";
+        heartshield.Rarity = RelicRarity.RARE;
+        heartshield.Sprite = AssetHelper.MakeSprite("heartshield.png");
 
-        r = new RelicBuilder();
-        r.name["en"] = "Evoke Mod";
-        r.description["en"] = "Every second <sprite name=\"BOMB\"> thrown will add one <sprite name=\"COIN_ONLY\"> to the board.";
-        r.rarity = RelicRarity.COMMON;
-        r.sprite = AssetHelper.MakeSprite("evokemod.png");
-        r.countdown = 2;
-        evokemod = r.Register();
+        evokemod = new CustomRelic("Evoke Mod");
+        evokemod.Name["en"] = "Evoke Mod";
+        evokemod.Description["en"] = "Every second <sprite name=\"BOMB\"> thrown will add one <sprite name=\"COIN_ONLY\"> to the board.";
+        evokemod.Rarity = RelicRarity.COMMON;
+        evokemod.Sprite = AssetHelper.MakeSprite("evokemod.png");
+        evokemod.Countdown = 2;
     }
 
     [HarmonyPatch(typeof(PlayerHealthController), "Heal")]
@@ -40,7 +38,7 @@ public class SampleRelics {
 
         int overhealing = Mathf.RoundToInt(amount - __result);
         int ballwark = overhealing / 2;
-        if (ballwark > 0 && Managers.relicManager.AttemptUseRelic(heartshield.effect)) {
+        if (ballwark > 0 && heartshield.AttemptUseRelic()) {
             Managers.playerStatusEffectController.ApplyStatusEffect(
                 new StatusEffect(StatusEffectType.Ballwark, ballwark),
                 StatusEffectSource.PLAYER
@@ -52,8 +50,8 @@ public class SampleRelics {
     [HarmonyPrefix]
     private static void OnBombExplode(BombLob bomb) {
         // This call will automatically handle the "every second bomb" condition
-        // for us, since we set "countdown = 2" above.
-        if (Managers.relicManager.AttemptUseRelic(evokemod.effect)) {
+        // for us, since we set "Countdown = 2" above.
+        if (evokemod.AttemptUseRelic()) {
             PegManager.AddGoldToPegsRequest(1, bomb.gameObject.transform.position);
         }
     }
