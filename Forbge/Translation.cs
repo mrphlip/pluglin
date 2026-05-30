@@ -6,6 +6,7 @@ namespace Forbge;
 
 public class Translation {
     private string _default = null;
+    private bool _defaultSet = false;
     private Dictionary<string, string> _localised = new Dictionary<string, string>();
     private TermData _termData = null;
 
@@ -13,6 +14,7 @@ public class Translation {
         get => _default;
         set {
             _default = value;
+            _defaultSet = true;
             if (_termData != null)
                 UpdateTermData();
         }
@@ -21,11 +23,17 @@ public class Translation {
         get => _localised[code];
         set {
             _localised[code] = value;
-            if (_default == null)
+            if (!_defaultSet) {
                 _default = value;
+                _defaultSet = true;
+            }
             if (_termData != null)
                 UpdateTermData();
         }
+    }
+
+    internal Translation(string initDefault = null) {
+        _default = initDefault;
     }
 
     internal void Register(string locKey) {
@@ -41,5 +49,15 @@ public class Translation {
             // The only flag seems to be: Flags[i] & 2 == auto-translated
             _termData.Flags[i] = 0;
         }
+    }
+
+    internal void Clone(Translation other) {
+        _default = other._default;
+        _defaultSet = other._defaultSet;
+        _localised.Clear();
+        foreach (var i in other._localised)
+            _localised[i.Key] = i.Value;
+        if (_termData != null)
+            UpdateTermData();
     }
 }

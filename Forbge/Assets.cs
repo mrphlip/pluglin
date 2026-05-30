@@ -61,6 +61,6 @@ public class AssetHelper {
     }
 
     public static Sprite MakeSprite(Texture2D tex, Rect bounds) {
-        return Sprite.Create(tex, bounds, new Vector2(0.5f, 0.5f));
+        return Sprite.Create(tex, bounds, new Vector2(0.5f, 0.5f), 8);
     }
 }

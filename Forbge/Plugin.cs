@@ -59,6 +59,9 @@ public class Registry : BaseUnityPlugin {
         inRegistration = false;
         currentRegistrar = null;
         Logger.LogInfo($"Registration complete!");
+
+        // Rebuild the relic/orb pools with our new stuff
+        Managers.loadoutManager.SetupLoadout();
     }
 
     internal static void AssertInRegistration() {
