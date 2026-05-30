@@ -3,7 +3,7 @@ Styling tags can be applied to most text that is displayed in-game, especially i
 
 For example:
 ```cs
-relic.description["en"] = "Throwing a <sprite name=\"BOMB\"> will <style=heal>heal 10</style>";
+relic.Description["en"] = "Throwing a <sprite name=\"BOMB\"> will <style=heal>heal 10</style>";
 ```
 
 Note that some styles can also cause additional information to appear. For example, using `<style=ballwark>` in a relic description can make an additional tooltip appear explaining what Ballwark is, this is caused automatically by the style tag.

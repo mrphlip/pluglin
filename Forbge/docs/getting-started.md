@@ -1,5 +1,5 @@
 # Part 1: Creating a basic BepInEx plugin for Peglin
-1. Install .NET SDK: https://dotnet.microsoft.com/en-us/download
+1. Install [.NET SDK](https://dotnet.microsoft.com/en-us/download)
 2. Install BepInEx templates:
 ```sh
 dotnet new install BepInEx.Templates::2.0.0-be.4 --nuget-source https://nuget.bepinex.dev/v3/index.json

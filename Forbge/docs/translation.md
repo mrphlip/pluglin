@@ -6,7 +6,7 @@ These are all handled in Forbge by the `Forbge.Translation` class.
 # Option 1: No translations
 If you don't care about translation, you can just set the `Default` property to your text, and call it a day. This text will then be shown regardless of what langauge the player has selected.
 ```cs
-relicbuilder.name.Default = "Sample relic";
+relic.Name.Default = "Sample relic";
 ```
 
 # Option 2: Provide translations
@@ -14,9 +14,9 @@ Alternatively, if you _do_ care about translation, you can provide the text in m
 
 If the player selects a lanauge which you haven't provided a translation, it will use whichever translation you provided first, as a fallback.
 ```cs
-relicbuilder.name["en"] = "Sample relic";
-relicbuilder.name["fr"] = "Exemple de relique";
-relicbuilder.name["de"] = "Beispiel eines Relikts";
+relic.Name["en"] = "Sample relic";
+relic.Name["fr"] = "Exemple de relique";
+relic.Name["de"] = "Beispiel eines Relikts";
 ```
 You can also provide _both_ translations for specific languages, _and_ `Default`, to provide an explicit fallback message for langauges that do not have a translation available.
 

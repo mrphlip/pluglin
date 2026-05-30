@@ -37,9 +37,9 @@ public abstract class CustomOrb : MonoBehaviour {
     }
 
     // Convenience properties
+    public PachinkoBall.OrbRarity Rarity { get => Ball.orbRarity; set { Ball.orbRarity = value; }}
     public int Damage { get => Attack.DamagePerPeg; set { Attack.DamagePerPeg = value; }}
     public int Crit { get => Attack.CritDamagePerPeg; set { Attack.CritDamagePerPeg = value; }}
-    public PachinkoBall.OrbRarity Rarity { get => Ball.orbRarity; set { Ball.orbRarity = value; }}
     public Sprite Sprite { get => Ball._renderer.sprite; set { Ball._renderer.sprite = value; }}
     public int Level { get => Attack.Level; set { Attack.Level = value; }}
     public float Radius { get => Collider.radius; set { Collider.radius = value; }}
